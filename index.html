@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Library Management System - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fas fa-book" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <h1>Library Management System</h1>
+                <p>Powered by Koha-inspired design</p>
+            </div>
+            
+            <div class="auth-body">
+                <form id="loginForm" onsubmit="event.preventDefault(); loginUser(email.value, password.value)">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <div class="input-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" class="form-control" placeholder="librarian@library.com" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    
+                    <div id="loginError" class="global-error" style="display: none;"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>or</span>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="signup.html" class="auth-link">Create new account</a>
+                    <span style="margin: 0 10px; color: #ddd;">|</span>
+                    <a href="forgot-password.html" class="auth-link">Forgot password?</a>
+                </div>
+            </div>
+            
+            <div class="auth-footer">
+                <i class="fas fa-shield-alt"></i> Secure login with Firebase Authentication
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/auth.js"></script>
+    
+    <script>
+        // Pre-fill for demo
+        document.getElementById('email').value = 'admin@library.com';
+        document.getElementById('password').value = 'admin123';
+    </script>
+</body>
+</html>
