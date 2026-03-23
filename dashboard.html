@@ -10,12 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary: #2c5f8a;
             --primary-dark: #1e4464;
@@ -33,253 +28,43 @@
             --radius-md: 10px;
             --radius-lg: 16px;
         }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--light-gray);
-            min-height: 100vh;
-            overflow-x: auto;
-        }
-
-        /* App Layout */
-        .app-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: var(--white);
-            box-shadow: var(--shadow-md);
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            transition: transform 0.3s ease;
-            z-index: 100;
-        }
-
-        .sidebar-header {
-            padding: 25px 20px;
-            text-align: center;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-        }
-
-        .sidebar-header h2 {
-            font-size: 1.3rem;
-            margin-bottom: 5px;
-            color: white;
-        }
-
-        .sidebar-header p {
-            font-size: 0.75rem;
-            opacity: 0.8;
-        }
-
-        .sidebar-nav {
-            padding: 20px 0;
-        }
-
-        .nav-item {
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--dark-gray);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .nav-item:hover {
-            background: var(--light-gray);
-            color: var(--primary);
-        }
-
-        .nav-item.active {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-left-color: var(--primary);
-        }
-
-        .nav-item i {
-            width: 24px;
-            font-size: 1.1rem;
-        }
-
-        .nav-item span {
-            flex: 1;
-            font-weight: 500;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            background: var(--light-gray);
-            min-height: 100vh;
-            overflow-x: auto;
-        }
-
-        .top-bar {
-            background: var(--white);
-            padding: 15px 25px;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 99;
-        }
-
-        .menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--primary);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .user-name {
-            font-weight: 500;
-            color: var(--dark);
-        }
-
-        .logout-btn {
-            background: var(--danger);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            padding: 8px 16px;
-            border-radius: var(--radius-md);
-            transition: all 0.3s ease;
-        }
-
-        .logout-btn:hover {
-            background: #c0392b;
-            transform: translateY(-2px);
-        }
-
-        .content-area {
-            padding: 25px;
-            overflow-x: auto;
-        }
-
-        /* Stats Cards */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: var(--white);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .stat-card i {
-            font-size: 2rem;
-            color: var(--primary);
-            margin-bottom: 10px;
-        }
-
-        .stat-card h3 {
-            color: var(--dark-gray);
-            font-size: 0.85rem;
-            margin-bottom: 8px;
-        }
-
-        .stat-card .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--dark);
-        }
-
-        /* Tables */
-        .table-container {
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            box-shadow: var(--shadow-sm);
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: var(--light-gray);
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: var(--dark);
-            border-bottom: 2px solid var(--gray);
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid var(--gray);
-        }
-
-        tr:hover {
-            background: var(--light-gray);
-        }
-
-        /* Badges */
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-block;
-            white-space: nowrap;
-        }
-
+        body { font-family: 'Inter', sans-serif; background: var(--light-gray); min-height: 100vh; overflow-x: auto; }
+        .app-wrapper { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: var(--white); box-shadow: var(--shadow-md); position: fixed; height: 100vh; overflow-y: auto; transition: transform 0.3s ease; z-index: 100; }
+        .sidebar-header { padding: 25px 20px; text-align: center; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: white; }
+        .sidebar-header p { font-size: 0.75rem; opacity: 0.8; }
+        .sidebar-nav { padding: 20px 0; }
+        .nav-item { padding: 12px 24px; display: flex; align-items: center; gap: 12px; color: var(--dark-gray); cursor: pointer; transition: all 0.3s ease; border-left: 3px solid transparent; }
+        .nav-item:hover { background: var(--light-gray); color: var(--primary); }
+        .nav-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); }
+        .nav-item i { width: 24px; font-size: 1.1rem; }
+        .nav-item span { flex: 1; font-weight: 500; }
+        .main-content { flex: 1; margin-left: 280px; background: var(--light-gray); min-height: 100vh; overflow-x: auto; }
+        .top-bar { background: var(--white); padding: 15px 25px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 99; }
+        .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--primary); }
+        .user-info { display: flex; align-items: center; gap: 20px; }
+        .user-name { font-weight: 500; color: var(--dark); }
+        .logout-btn { background: var(--danger); border: none; color: white; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; border-radius: var(--radius-md); transition: all 0.3s ease; }
+        .logout-btn:hover { background: #c0392b; transform: translateY(-2px); }
+        .content-area { padding: 25px; overflow-x: auto; }
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--white); padding: 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); text-align: center; transition: transform 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .stat-card i { font-size: 2rem; color: var(--primary); margin-bottom: 10px; }
+        .stat-card h3 { color: var(--dark-gray); font-size: 0.85rem; margin-bottom: 8px; }
+        .stat-card .stat-number { font-size: 2rem; font-weight: bold; color: var(--dark); }
+        .table-container { background: var(--white); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); overflow-x: auto; width: 100%; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: var(--light-gray); padding: 12px; text-align: left; font-weight: 600; color: var(--dark); border-bottom: 2px solid var(--gray); }
+        td { padding: 12px; border-bottom: 1px solid var(--gray); }
+        tr:hover { background: var(--light-gray); }
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; white-space: nowrap; }
         .badge-available { background: #d4edda; color: #155724; }
         .badge-borrowed { background: #f8d7da; color: #721c24; }
         .badge-warning { background: #fff3cd; color: #856404; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
+        .btn { padding: 10px 20px; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
         .btn-success { background: var(--success); color: white; }
@@ -287,417 +72,81 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-warning { background: var(--warning); color: white; }
         .action-btn { padding: 6px 12px; font-size: 0.8rem; margin: 0 3px; }
-
-        /* Forms */
-        .form-container {
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: var(--shadow-sm);
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .section-header h2 {
-            font-size: 1.3rem;
-            color: var(--dark);
-        }
-
-        .section-header h2 i {
-            color: var(--primary);
-            margin-right: 8px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--dark);
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--gray);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        /* Search */
-        .search-box {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .search-box input {
-            flex: 1;
-            padding: 12px 20px;
-            border: 2px solid var(--gray);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            min-width: 200px;
-        }
-
-        .ddc-nav {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
-            margin-bottom: 25px;
-        }
-
-        .ddc-class {
-            background: var(--white);
-            padding: 12px 5px;
-            border-radius: var(--radius-md);
-            text-align: center;
-            cursor: pointer;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .ddc-class:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .quick-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 25px;
-            flex-wrap: wrap;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: var(--white);
-            width: 90%;
-            max-width: 550px;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: var(--radius-lg);
-            max-height: 85vh;
-            overflow-y: auto;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--gray);
-        }
-
-        .modal-header h3 {
-            color: var(--dark);
-            font-size: 1.3rem;
-        }
-
-        .modal-header h3 i {
-            color: var(--primary);
-            margin-right: 10px;
-        }
-
-        .close {
-            font-size: 1.8rem;
-            cursor: pointer;
-            color: var(--dark-gray);
-            transition: color 0.3s;
-        }
-
-        .close:hover {
-            color: var(--danger);
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--gray);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--white);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-md);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 1000;
-            animation: slideInRight 0.3s ease;
-        }
-
+        .form-container { background: var(--white); border-radius: var(--radius-lg); padding: 25px; margin-bottom: 25px; box-shadow: var(--shadow-sm); width: 100%; overflow-x: auto; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .section-header h2 { font-size: 1.3rem; color: var(--dark); }
+        .section-header h2 i { color: var(--primary); margin-right: 8px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--dark); }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid var(--gray); border-radius: var(--radius-md); font-size: 14px; transition: all 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .search-box { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .search-box input { flex: 1; padding: 12px 20px; border: 2px solid var(--gray); border-radius: var(--radius-md); font-size: 14px; min-width: 200px; }
+        .ddc-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 25px; }
+        .ddc-class { background: var(--white); padding: 12px 5px; border-radius: var(--radius-md); text-align: center; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s; border: 2px solid transparent; }
+        .ddc-class:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .quick-actions { display: flex; gap: 15px; justify-content: center; margin-top: 25px; flex-wrap: wrap; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--white); width: 90%; max-width: 550px; margin: 50px auto; padding: 30px; border-radius: var(--radius-lg); max-height: 85vh; overflow-y: auto; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--gray); }
+        .modal-header h3 { color: var(--dark); font-size: 1.3rem; }
+        .modal-header h3 i { color: var(--primary); margin-right: 10px; }
+        .close { font-size: 1.8rem; cursor: pointer; color: var(--dark-gray); transition: color 0.3s; }
+        .close:hover { color: var(--danger); }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--gray); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: var(--white); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 12px 20px; display: flex; align-items: center; gap: 12px; z-index: 1000; animation: slideInRight 0.3s ease; }
         .toast-success { border-left: 4px solid var(--success); }
         .toast-error { border-left: 4px solid var(--danger); }
         .toast-warning { border-left: 4px solid var(--warning); }
-
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(100%); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* Menu Overlay */
-        .menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 99;
-            display: none;
-            cursor: pointer;
-            backdrop-filter: blur(2px);
-        }
-
-        /* ========== RESPONSIVE DESIGN ========== */
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; cursor: pointer; backdrop-filter: blur(2px); }
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 85%;
-                max-width: 280px;
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100vh;
-                z-index: 1000;
-            }
-            
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0 !important;
-                width: 100%;
-            }
-            
-            .menu-toggle {
-                display: block;
-            }
-            
-            .content-area {
-                padding: 15px;
-            }
-            
-            .stats-container {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .stat-card {
-                padding: 15px;
-            }
-            
-            .stat-card .stat-number {
-                font-size: 1.5rem;
-            }
-            
-            .table-container {
-                margin: 0;
-                padding: 0 0 10px 0;
-            }
-            
-            .table-container table {
-                min-width: 600px;
-            }
-            
-            th, td {
-                padding: 10px 8px;
-            }
-            
-            .form-container {
-                padding: 15px;
-            }
-            
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .section-header h2 {
-                font-size: 1.1rem;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .search-box {
-                flex-direction: column;
-            }
-            
-            .search-box input,
-            .search-box button {
-                width: 100%;
-            }
-            
-            .ddc-nav {
-                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-                gap: 8px;
-            }
-            
-            .ddc-class {
-                padding: 8px 3px;
-            }
-            
-            .ddc-class strong {
-                font-size: 0.9rem;
-            }
-            
-            .ddc-class small {
-                font-size: 0.7rem;
-            }
-            
-            .quick-actions {
-                flex-direction: column;
-            }
-            
-            .quick-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .modal-content {
-                width: 95%;
-                margin: 20px auto;
-                padding: 20px;
-            }
-            
-            .btn {
-                padding: 10px 16px;
-                font-size: 0.85rem;
-            }
-            
-            .user-info {
-                gap: 10px;
-            }
-            
-            .user-name {
-                font-size: 0.85rem;
-            }
-            
-            .logout-btn {
-                padding: 6px 12px;
-                font-size: 0.75rem;
-            }
-            
-            .menu-toggle {
-                padding: 8px;
-                font-size: 1.2rem;
-            }
+            .sidebar { transform: translateX(-100%); width: 85%; max-width: 280px; position: fixed; top: 0; left: 0; height: 100vh; z-index: 1000; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; width: 100%; }
+            .menu-toggle { display: block; }
+            .content-area { padding: 15px; }
+            .stats-container { grid-template-columns: 1fr; gap: 12px; }
+            .stat-card { padding: 15px; }
+            .stat-card .stat-number { font-size: 1.5rem; }
+            .table-container { margin: 0; padding: 0 0 10px 0; }
+            .table-container table { min-width: 600px; }
+            th, td { padding: 10px 8px; }
+            .form-container { padding: 15px; }
+            .section-header { flex-direction: column; align-items: flex-start; }
+            .section-header h2 { font-size: 1.1rem; }
+            .form-row { grid-template-columns: 1fr; gap: 12px; }
+            .search-box { flex-direction: column; }
+            .search-box input, .search-box button { width: 100%; }
+            .ddc-nav { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+            .ddc-class { padding: 8px 3px; }
+            .quick-actions { flex-direction: column; }
+            .quick-actions .btn { width: 100%; justify-content: center; }
+            .modal-content { width: 95%; margin: 20px auto; padding: 20px; }
+            .btn { padding: 10px 16px; font-size: 0.85rem; }
+            .user-info { gap: 10px; }
+            .user-name { font-size: 0.85rem; }
+            .logout-btn { padding: 6px 12px; font-size: 0.75rem; }
+            .menu-toggle { padding: 8px; font-size: 1.2rem; }
         }
-
-        /* Small phones */
         @media (max-width: 480px) {
-            .top-bar {
-                padding: 10px 12px;
-            }
-            
-            .content-area {
-                padding: 12px;
-            }
-            
-            .stat-card .stat-number {
-                font-size: 1.3rem;
-            }
-            
-            .stat-card i {
-                font-size: 1.5rem;
-            }
-            
-            .section-header h2 {
-                font-size: 1rem;
-            }
-            
-            .form-group label {
-                font-size: 0.8rem;
-            }
-            
-            .form-group input,
-            .form-group select {
-                padding: 10px;
-                font-size: 13px;
-            }
-            
-            .btn {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
-            
-            .action-btn {
-                padding: 4px 8px;
-                font-size: 0.7rem;
-            }
+            .top-bar { padding: 10px 12px; }
+            .content-area { padding: 12px; }
+            .stat-card .stat-number { font-size: 1.3rem; }
+            .stat-card i { font-size: 1.5rem; }
+            .section-header h2 { font-size: 1rem; }
+            .form-group label { font-size: 0.8rem; }
+            .form-group input, .form-group select { padding: 10px; font-size: 13px; }
+            .btn { padding: 8px 12px; font-size: 0.8rem; }
+            .action-btn { padding: 4px 8px; font-size: 0.7rem; }
         }
     </style>
 </head>
 <body>
     <div class="app-wrapper">
-        <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <img src="bss.png" alt="Library Logo" style="width: 60px; height: 60px; margin-bottom: 10px; border-radius: 50%;">
@@ -705,57 +154,30 @@
                 <p>Integrated Management System</p>
             </div>            
             <nav class="sidebar-nav">
-                <div class="nav-item active" data-view="dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </div>
-                <div class="nav-item" data-view="catalog">
-                    <i class="fas fa-books"></i>
-                    <span>Catalog</span>
-                </div>
-                <div class="nav-item" data-view="members">
-                    <i class="fas fa-users"></i>
-                    <span>Members</span>
-                </div>
-                <div class="nav-item" data-view="circulation">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Circulation</span>
-                </div>
-                <div class="nav-item" data-view="fines">
-                    <i class="fas fa-money-bill"></i>
-                    <span>Fines</span>
-                </div>
-                <div class="nav-item" data-view="ddcClasses">
-                    <i class="fas fa-sitemap"></i>
-                    <span>Classes</span>
-                </div>
+                <div class="nav-item active" data-view="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></div>
+                <div class="nav-item" data-view="catalog"><i class="fas fa-books"></i><span>Catalog</span></div>
+                <div class="nav-item" data-view="members"><i class="fas fa-users"></i><span>Members</span></div>
+                <div class="nav-item" data-view="circulation"><i class="fas fa-exchange-alt"></i><span>Circulation</span></div>
+                <div class="nav-item" data-view="fines"><i class="fas fa-money-bill"></i><span>Fines</span></div>
+                <div class="nav-item" data-view="ddcClasses"><i class="fas fa-sitemap"></i><span>Classes</span></div>
             </nav>
         </aside>
         
-        <!-- Main Content -->
         <main class="main-content">
             <div class="top-bar">
-                <button class="menu-toggle" id="menuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
                 <div class="user-info">
                     <i class="fas fa-user-circle" style="font-size: 1.5rem; color: var(--primary);"></i>
                     <span class="user-name" id="userName">Librarian</span>
-                    <button onclick="handleLogout()" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
+                    <span class="user-role-badge" id="userRoleBadge"></span>
+                    <button onclick="handleLogout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
             </div>
-            
             <div class="content-area" id="contentArea">
-                <div style="text-align: center; padding: 50px;">
-                    <div class="spinner"></div>
-                    <p>Loading library system...</p>
-                </div>
+                <div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading library system...</p></div>
             </div>
         </main>
     </div>
-
     <div id="modal" class="modal"><div class="modal-content" id="modalContent"></div></div>
 
     <script>
@@ -768,15 +190,14 @@
             messagingSenderId: "767632185573",
             appId: "1:767632185573:web:4e5ff30593d436cba7dc0c"
         };
-
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
         // ========== GLOBALS ==========
         let currentUser = null;
-        let currentUserRole = null;
+        let currentUserRole = 'staff';
+        let currentUserName = '';
 
         const ddcMainClasses = [
             { number: '000', name: 'General Works' },
@@ -791,90 +212,66 @@
             { number: '900', name: 'History & Geography' }
         ];
 
-        // ========== ROLE FUNCTIONS ==========
+        // Role display names
+        const roleDisplayNames = {
+            'head_librarian': 'Head Librarian',
+            'senior_librarian': 'Senior Librarian',
+            'librarian': 'Librarian',
+            'assistant': 'Assistant',
+            'circulation': 'Circulation',
+            'admin': 'Admin',
+            'staff': 'Staff'
+        };
+
+        const roleColors = {
+            'head_librarian': '#8e44ad',
+            'senior_librarian': '#e74c3c',
+            'librarian': '#27ae60',
+            'assistant': '#3498db',
+            'circulation': '#f39c12',
+            'admin': '#e74c3c',
+            'staff': '#6c757d'
+        };
+
+        // ========== ROLE PERMISSIONS ==========
+        function canEditBooks() { return currentUserRole === 'admin' || currentUserRole === 'head_librarian' || currentUserRole === 'senior_librarian' || currentUserRole === 'librarian' || currentUserRole === 'assistant'; }
+        function canEditMembers() { return currentUserRole === 'admin' || currentUserRole === 'head_librarian' || currentUserRole === 'senior_librarian' || currentUserRole === 'librarian' || currentUserRole === 'assistant'; }
+        function canManageCirculation() { return currentUserRole !== 'staff'; }
+        function canManageFines() { return currentUserRole !== 'staff'; }
+        function canDeleteData() { return currentUserRole === 'admin' || currentUserRole === 'head_librarian' || currentUserRole === 'senior_librarian'; }
+        function canViewReports() { return currentUserRole !== 'staff' && currentUserRole !== 'circulation'; }
+        function canManageUsers() { return currentUserRole === 'admin' || currentUserRole === 'head_librarian'; }
+
+        // ========== AUTHENTICATION ==========
+        function handleLogout() {
+            auth.signOut().then(() => { window.location.href = 'index.html'; });
+        }
+
         async function loadUserRole() {
             const user = auth.currentUser;
             if (user) {
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
-                        currentUserRole = userDoc.data().role;
+                        currentUserRole = userDoc.data().role || 'staff';
+                        currentUserName = userDoc.data().name || user.email.split('@')[0];
                     } else {
                         const usersSnapshot = await db.collection('users').limit(1).get();
                         currentUserRole = usersSnapshot.empty ? 'admin' : 'staff';
+                        currentUserName = user.email.split('@')[0];
                         await db.collection('users').doc(user.uid).set({
-                            email: user.email,
-                            name: user.email.split('@')[0],
-                            role: currentUserRole,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            email: user.email, name: currentUserName, role: currentUserRole, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }
-                } catch (error) {
-                    currentUserRole = 'staff';
-                }
-                return currentUserRole;
+                } catch (error) { currentUserRole = 'staff'; }
+                document.getElementById('userName').textContent = currentUserName;
+                const roleBadge = document.getElementById('userRoleBadge');
+                const roleName = roleDisplayNames[currentUserRole] || 'Staff';
+                const roleColor = roleColors[currentUserRole] || '#6c757d';
+                roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem;">${roleName}</span>`;
+                if (canManageUsers()) addAdminLinkToSidebar();
             }
-            return null;
-        }
-
-        function isAdmin() { return currentUserRole === 'admin'; }
-        function isLibrarian() { return currentUserRole === 'librarian'; }
-        function isStaff() { return currentUserRole === 'staff' || !currentUserRole; }
-        function canEditBooks() { return isAdmin() || isLibrarian(); }
-        function canEditMembers() { return isAdmin() || isLibrarian(); }
-        function canManageCirculation() { return isAdmin() || isLibrarian(); }
-        function canDeleteData() { return isAdmin(); }
-
-        // ========== ROLE-BASED UI CONTROL ==========
-        async function loadUserRoleForDashboard() {
-            await loadUserRole();
-            updateDashboardUIForRole();
-            if (isAdmin()) {
-                addAdminLinkToSidebar();
-            }
-            displayUserRole();
-        }
-
-        function updateDashboardUIForRole() {
-            const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
-            const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
-            const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
-            
-            if (isStaff()) {
-                if (addBookBtn) addBookBtn.style.display = 'none';
-                if (addMemberBtn) addMemberBtn.style.display = 'none';
-                if (checkoutBtn) checkoutBtn.style.display = 'none';
-                hideDeleteButtons();
-                disableReturnButtons();
-                showToast('You are in read-only mode (Staff)', 'info');
-            } else if (isLibrarian()) {
-                if (addBookBtn) addBookBtn.style.display = 'inline-flex';
-                if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
-                if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
-                hideDeleteButtons();
-                showToast('Librarian mode - You can manage books, members, and circulation', 'info');
-            } else if (isAdmin()) {
-                showToast('Admin mode - Full access', 'success');
-            }
-        }
-
-        function hideDeleteButtons() {
-            const deleteButtons = document.querySelectorAll('.btn-danger');
-            deleteButtons.forEach(btn => {
-                if (btn.textContent.includes('Delete') || btn.onclick?.toString().includes('delete')) {
-                    btn.style.display = 'none';
-                }
-            });
-        }
-
-        function disableReturnButtons() {
-            const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
-            returnButtons.forEach(btn => {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.style.cursor = 'not-allowed';
-                btn.title = 'Staff cannot process returns';
-            });
+            return currentUserRole;
         }
 
         function addAdminLinkToSidebar() {
@@ -882,152 +279,17 @@
             if (sidebarNav && !document.querySelector('.admin-nav-link')) {
                 const adminLink = document.createElement('div');
                 adminLink.className = 'nav-item admin-nav-link';
-                adminLink.setAttribute('data-view', 'admin');
                 adminLink.innerHTML = `<i class="fas fa-user-shield"></i><span>User Management</span>`;
                 adminLink.onclick = () => { window.location.href = 'admin.html'; };
                 sidebarNav.appendChild(adminLink);
             }
         }
 
-        function displayUserRole() {
-            const userInfo = document.querySelector('.user-info');
-            if (userInfo && !document.querySelector('.user-role-badge')) {
-                const roleBadge = document.createElement('span');
-                roleBadge.className = 'user-role-badge';
-                let roleText = '', roleColor = '';
-                if (isAdmin()) {
-                    roleText = 'Admin';
-                    roleColor = '#e74c3c';
-                } else if (isLibrarian()) {
-                    roleText = 'Librarian';
-                    roleColor = '#27ae60';
-                } else {
-                    roleText = 'Staff';
-                    roleColor = '#3498db';
-                }
-                roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
-                userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
-            }
-        }
-
-        // Override functions with role checks
-        const originalDeleteBook = window.deleteBook;
-        window.deleteBook = async function(bookId) {
-            if (!canDeleteData()) {
-                showToast('Permission denied: Only admins can delete books', 'error');
-                return;
-            }
-            if (confirm('Delete this book?')) {
-                if (originalDeleteBook) await originalDeleteBook(bookId);
-                else {
-                    try { await db.collection('books').doc(bookId).delete(); loadCatalog(); showToast('Book deleted', 'success'); } 
-                    catch (error) { alert('Error: ' + error.message); }
-                }
-            }
-        };
-
-        const originalDeleteMember = window.deleteMember;
-        window.deleteMember = async function(memberId) {
-            if (!canDeleteData()) {
-                showToast('Permission denied: Only admins can delete members', 'error');
-                return;
-            }
-            if (confirm('Delete this member?')) {
-                if (originalDeleteMember) await originalDeleteMember(memberId);
-                else {
-                    try { await db.collection('members').doc(memberId).delete(); loadMembers(); showToast('Member deleted', 'success'); } 
-                    catch (error) { alert('Error: ' + error.message); }
-                }
-            }
-        };
-
-        const originalShowAddBookForm = window.showAddBookForm;
-        window.showAddBookForm = function() {
-            if (!canEditBooks()) {
-                showToast('Permission denied: Only admins and librarians can add books', 'error');
-                return;
-            }
-            if (originalShowAddBookForm) originalShowAddBookForm();
-            else {
-                const modal = document.getElementById('modal');
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = `
-                    <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add New Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                    <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="accessionNo" required placeholder="e.g., A001"></div>
-                    <div class="form-group"><label>Title *</label><input type="text" id="title" required></div>
-                    <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
-                    <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC Number *</label><select id="ddcNumber" required><option value="">Select</option>${ddcMainClasses.map(d => `<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year" min="1900" max="2026"></div><div class="form-group"><label>Total Copies *</label><input type="number" id="totalCopies" value="1" min="1" required></div></div>
-                    <button type="submit" class="btn btn-success" style="width:100%">Save Book</button></form>`;
-                modal.style.display = 'block';
-            }
-        };
-
-        const originalShowAddMemberForm = window.showAddMemberForm;
-        window.showAddMemberForm = function() {
-            if (!canEditMembers()) {
-                showToast('Permission denied: Only admins and librarians can add members', 'error');
-                return;
-            }
-            if (originalShowAddMemberForm) originalShowAddMemberForm();
-            else {
-                const modal = document.getElementById('modal');
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = `
-                    <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add New Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                    <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID *</label><input type="text" id="memberId" required placeholder="e.g., M001"></div>
-                    <div class="form-group"><label>Full Name *</label><input type="text" id="memberName" required></div>
-                    <div class="form-row"><div class="form-group"><label>Category *</label><select id="memberCategory" required><option value="">Select</option><option value="Student">Student</option><option value="Teaching Staff">Teaching Staff</option><option value="Non-Teaching Staff">Non-Teaching Staff</option><option value="External Member">External Member</option></select></div>
-                    <div class="form-group"><label>Phone *</label><input type="tel" id="memberPhone" required></div></div>
-                    <div class="form-group"><label>Status *</label><select id="memberStatus" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-                    <button type="submit" class="btn btn-success" style="width:100%">Save Member</button></form>`;
-                modal.style.display = 'block';
-            }
-        };
-
-        const originalShowCheckoutForm = window.showCheckoutForm;
-        window.showCheckoutForm = function() {
-            if (!canManageCirculation()) {
-                showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
-                return;
-            }
-            if (originalShowCheckoutForm) originalShowCheckoutForm();
-            else {
-                const modal = document.getElementById('modal');
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = `
-                    <div class="modal-header"><h3><i class="fas fa-hand-holding"></i> New Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                    <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="checkoutAccessionNo" required placeholder="e.g., A001"></div>
-                    <div class="form-group"><label>Member ID *</label><input type="text" id="checkoutMemberId" required placeholder="e.g., M001"></div>
-                    <div class="form-row"><div class="form-group"><label>Issue Date *</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
-                    <div class="form-group"><label>Loan Period *</label><select id="loanPeriod"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
-                    <button type="submit" class="btn btn-success" style="width:100%">Process Checkout</button></form>`;
-                modal.style.display = 'block';
-            }
-        };
-
-        // ========== AUTHENTICATION ==========
-        function handleLogout() {
-            auth.signOut().then(() => {
-                window.location.href = 'index.html';
-            }).catch((error) => {
-                console.error('Logout error:', error);
-                showToast('Error logging out', 'error');
-            });
-        }
-
         auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
-            } else {
-                currentUser = user;
-                document.getElementById('userName').textContent = user.email.split('@')[0];
-                await loadUserRoleForDashboard();
-                loadDashboard();
-            }
+            if (!user) { window.location.href = 'index.html'; }
+            else { currentUser = user; await loadUserRole(); loadDashboard(); }
         });
 
-        // ========== HELPER FUNCTIONS ==========
         function showToast(message, type) {
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
@@ -1035,266 +297,127 @@
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
-
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
         // ========== DASHBOARD ==========
         async function loadDashboard() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading dashboard...</p></div>';
-            
             try {
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
-
-                let totalBooksCount = 0;
-                let totalAvailableCopies = 0;
-                let totalBorrowedCopies = 0;
-                
-                booksSnapshot.forEach(doc => {
-                    const book = doc.data();
-                    const totalCopies = book.totalCopies || 0;
-                    const availableCopies = book.availableCopies || 0;
-                    totalBooksCount += totalCopies;
-                    totalAvailableCopies += availableCopies;
-                    totalBorrowedCopies += (totalCopies - availableCopies);
-                });
-
-                const totalMembers = membersSnapshot.size;
-                const activeBorrowings = borrowedSnapshot.size;
-
+                let totalBooksCount = 0, totalAvailableCopies = 0;
+                booksSnapshot.forEach(doc => { const b = doc.data(); totalBooksCount += b.totalCopies || 0; totalAvailableCopies += b.availableCopies || 0; });
+                const totalBorrowedCopies = totalBooksCount - totalAvailableCopies;
                 let transactionsHtml = '';
                 try {
                     const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
-                    recent.forEach(doc => {
-                        const t = doc.data();
-                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                        transactionsHtml += `
-                            <tr>
-                                <td>${t.transactionId || 'N/A'}</td>
-                                <td>${t.accessionNo || 'N/A'}</td>
-                                <td>${t.memberId || 'N/A'}</td>
-                                <td>${issueDate}</td>
-                                <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
-                            </tr>
-                        `;
+                    recent.forEach(doc => { const t = doc.data(); const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
+                        transactionsHtml += `<tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
                     });
                 } catch(e) {}
-
                 const html = `
                     <div class="stats-container">
                         <div class="stat-card"><i class="fas fa-book"></i><h3>Total Books (Copies)</h3><div class="stat-number">${totalBooksCount}</div><small>${booksSnapshot.size} unique titles</small></div>
                         <div class="stat-card"><i class="fas fa-check-circle"></i><h3>Available Books</h3><div class="stat-number">${totalAvailableCopies}</div></div>
                         <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed Books</h3><div class="stat-number">${totalBorrowedCopies}</div></div>
-                        <div class="stat-card"><i class="fas fa-users"></i><h3>Total Members</h3><div class="stat-number">${totalMembers}</div></div>
-                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${activeBorrowings}</div></div>
+                        <div class="stat-card"><i class="fas fa-users"></i><h3>Total Members</h3><div class="stat-number">${membersSnapshot.size}</div></div>
+                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${borrowedSnapshot.size}</div></div>
                     </div>
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
-                        <div class="table-container">
-                            <table>
-                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
-                                <tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <div class="form-container"><div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div><div class="table-container"><table><thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead><tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody></table></div></div>
                     <div class="quick-actions">
                         <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
                         <button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button>
                         <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
-                    </div>
-                `;
+                    </div>`;
                 contentArea.innerHTML = html;
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard. Please check your Firebase connection.</div>';
-            }
+            } catch (error) { contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard</div>'; }
         }
 
         // ========== CATALOG ==========
         async function loadCatalog() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading catalog...</p></div>';
-            
             try {
                 const booksSnapshot = await db.collection('books').orderBy('accessionNo').get();
                 let booksHtml = '';
-                
                 booksSnapshot.forEach(doc => {
                     const b = doc.data();
                     const total = b.totalCopies || 0;
                     const available = b.availableCopies || 0;
-                    const borrowed = total - available;
-                    const status = available > 0 ? 'Available' : 'Borrowed';
-                    const statusClass = available > 0 ? 'available' : 'borrowed';
-                    
-                    booksHtml += `
-                        <tr>
-                            <td><strong>${b.accessionNo || 'N/A'}</strong></td>
-                            <td>${b.title || 'N/A'}</td>
-                            <td>${b.author || 'N/A'}</td>
-                            <td>${b.isbn || '-'}</td>
-                            <td>${b.subject || '-'}</td>
-                            <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
-                            <td>${b.year || '-'}</td>
-                            <td style="text-align: center;"><strong>${total}</strong></td>
-                            <td style="text-align: center;"><span style="color: ${available > 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${available}</span> / ${total}${borrowed > 0 ? `<small> (${borrowed} borrowed)</small>` : ''}</td>
-                            <td><span class="badge badge-${statusClass}">${status}</span></td>
-                            <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
-                        </tr>
-                    `;
+                    booksHtml += `<tr><td><strong>${b.accessionNo || 'N/A'}</strong></td><td>${b.title || 'N/A'}</td><td>${b.author || 'N/A'}</td><td>${b.isbn || '-'}</td><td>${b.subject || '-'}</td><td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td><td>${b.year || '-'}</td><td style="text-align:center;"><strong>${total}</strong></td><td style="text-align:center;"><span style="color: ${available > 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${available}</span> / ${total}</td><td><span class="badge badge-${available > 0 ? 'available' : 'borrowed'}">${available > 0 ? 'Available' : 'Borrowed'}</span></td>
+                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td></tr>`;
                 });
-
-                const html = `
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-books"></i> DDC Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add New Book</button></div>
-                        <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()"><i class="fas fa-search"></i> Search</button></div>
-                        <div class="ddc-nav">${ddcMainClasses.map(ddc => `<div class="ddc-class" onclick="filterByDDC('${ddc.number}')"><strong>${ddc.number}</strong><br><small>${ddc.name}</small></div>`).join('')}</div>
-                        <div class="table-container">
-                            <table>
-                                <thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11" style="text-align:center">No books. Click "Add New Book" to get started!</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
+                const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-books"></i> DDC Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add New Book</button></div>
+                    <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN..."><button class="btn btn-primary" onclick="searchCatalog()"><i class="fas fa-search"></i> Search</button></div>
+                    <div class="ddc-nav">${ddcMainClasses.map(ddc => `<div class="ddc-class" onclick="filterByDDC('${ddc.number}')"><strong>${ddc.number}</strong><br><small>${ddc.name}</small></div>`).join('')}</div>
+                    <div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11" style="text-align:center">No books</td></tr>'}</tbody></table></div></div>`;
                 contentArea.innerHTML = html;
-            } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>';
-            }
+            } catch (error) { contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>'; }
         }
 
         // ========== MEMBERS ==========
         async function loadMembers() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading members...</p></div>';
-            
             try {
                 const membersSnapshot = await db.collection('members').orderBy('memberId').get();
                 let membersHtml = '';
                 membersSnapshot.forEach(doc => {
                     const m = doc.data();
-                    membersHtml += `
-                        <tr>
-                            <td><strong>${m.memberId || 'N/A'}</strong></td>
-                            <td>${m.name || 'N/A'}</td>
-                            <td><span class="badge badge-info">${m.category || 'N/A'}</span></td>
-                            <td>${m.phone || 'N/A'}</td>
-                            <td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span></td>
-                            <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
-                        </tr>
-                    `;
+                    membersHtml += `<tr><td><strong>${m.memberId || 'N/A'}</strong></td><td>${m.name || 'N/A'}</td><td><span class="badge badge-info">${m.category || 'N/A'}</span></td><td>${m.phone || 'N/A'}</td><td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span></td>
+                        <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td></tr>`;
                 });
-
-                const html = `
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-users"></i> Library Members</h2><button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button></div>
-                        <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name or ID..."><button class="btn btn-primary" onclick="searchMembers()"><i class="fas fa-search"></i> Search</button></div>
-                        <div class="table-container">
-                            <table>
-                                <thead><tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody id="membersTableBody">${membersHtml || '<tr><td colspan="6" style="text-align:center">No members registered</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
+                const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-users"></i> Library Members</h2><button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button></div>
+                    <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name or ID..."><button class="btn btn-primary" onclick="searchMembers()"><i class="fas fa-search"></i> Search</button></div>
+                    <div class="table-container"><table><thead><tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="membersTableBody">${membersHtml || '<tr><td colspan="6" style="text-align:center">No members</td></tr>'}</tbody></table></div></div>`;
                 contentArea.innerHTML = html;
-            } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading members</div>';
-            }
+            } catch (error) { contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading members</div>'; }
         }
 
         // ========== CIRCULATION ==========
         async function loadCirculation() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading circulation...</p></div>';
-            
             try {
                 const transactionsSnapshot = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let transactionsHtml = '';
-                
                 transactionsSnapshot.forEach(doc => {
                     const t = doc.data();
                     const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-';
                     const dueDate = t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-';
                     const returnDate = t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-';
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
-                    const statusClass = isOverdue ? 'warning' : (t.status === 'Borrowed' ? 'borrowed' : 'available');
-                    
-                    transactionsHtml += `
-                        <tr>
-                            <td>${t.transactionId || 'N/A'}</td>
-                            <td><strong>${t.accessionNo || 'N/A'}</strong></td>
-                            <td>${t.memberId || 'N/A'}</td>
-                            <td>${issueDate}</td>
-                            <td>${dueDate}</td>
-                            <td>${returnDate}</td>
-                            <td><span class="badge badge-${statusClass}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span></td>
-                            <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td>
-                        </tr>
-                    `;
+                    transactionsHtml += `<tr><td>${t.transactionId || 'N/A'}</td><td><strong>${t.accessionNo || 'N/A'}</strong></td><td>${t.memberId || 'N/A'}</td> <td>${issueDate}</td> <td>${dueDate}</td> <td>${returnDate}</td> <td><span class="badge badge-${isOverdue ? 'warning' : (t.status === 'Borrowed' ? 'borrowed' : 'available')}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span></td>
+                        <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td> </tr>`;
                 });
-
-                const html = `
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button></div>
-                        <div class="search-box"><input type="text" id="circulationSearch" placeholder="Search by transaction ID, accession no, or member ID..."><button class="btn btn-primary" onclick="searchCirculation()"><i class="fas fa-search"></i> Search</button></div>
-                        <div class="table-container">
-                            <table>
-                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody id="circulationTableBody">${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
+                const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button></div>
+                    <div class="search-box"><input type="text" id="circulationSearch" placeholder="Search..."><button class="btn btn-primary" onclick="searchCirculation()"><i class="fas fa-search"></i> Search</button></div>
+                    <div class="table-container"> <table> <thead> <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th><th>Actions</th></tr> </thead> <tbody>${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>'}</tbody> </table> </div></div>`;
                 contentArea.innerHTML = html;
-            } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation</div>';
-            }
+            } catch (error) { contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation</div>'; }
         }
 
         // ========== FINES ==========
         async function loadFines() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading fines...</p></div>';
-            
             try {
                 const finesSnapshot = await db.collection('fines').get();
-                let finesHtml = '';
-                let totalFines = 0;
-                
+                let finesHtml = '', totalFines = 0;
                 finesSnapshot.forEach(doc => {
                     const f = doc.data();
                     totalFines += f.totalFine || 0;
-                    finesHtml += `
-                        <tr>
-                            <td>${f.transactionId || 'N/A'}</td>
-                            <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
-                            <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
-                            <td>${f.daysLate || 0}</td>
-                            <td>K${f.finePerDay || 500}</td>
-                            <td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td>
-                            <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                        </tr>
-                    `;
+                    finesHtml += ` <tr><td>${f.transactionId || 'N/A'}</td><td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.daysLate || 0}</td><td>K${f.finePerDay || 500}</td><td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td><td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td></tr>`;
                 });
-
-                const html = `
-                    <div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Outstanding Fines</h3><div class="stat-number" style="color:#e74c3c">K${totalFines}</div></div></div>
+                const html = `<div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Outstanding Fines</h3><div class="stat-number" style="color:#e74c3c">K${totalFines}</div></div></div>
                     <div class="form-container"><div class="section-header"><h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2></div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Action</th></tr></thead>
-                            <tbody>${finesHtml || '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>'}</tbody>
-                        </table>
-                    </div></div>`;
+                    <div class="table-container"><table><thead><tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Action</th></tr></thead><tbody>${finesHtml || '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>'}</tbody></table></div></div>`;
                 contentArea.innerHTML = html;
-            } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading fines</div>';
-            }
+            } catch (error) { contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading fines</div>'; }
         }
 
-        // ========== DDC CLASSES ==========
         function loadDDCClasses() {
             const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Main Classes</h2></div><div class="table-container"><table><thead><tr><th>Class Number</th><th>Class Name</th><th>Description</th></tr></thead><tbody>${ddcMainClasses.map(ddc => `<tr><td><strong>${ddc.number}</strong></td><td>${ddc.name}</td><td>Books in ${ddc.name.toLowerCase()}</td></tr>`).join('')}</tbody></table></div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><h4><i class="fas fa-info-circle"></i> About DDC</h4><p>The Dewey Decimal Classification organizes library materials by discipline. The ten main classes (000-900) cover all major branches of knowledge.</p></div></div>`;
             document.getElementById('contentArea').innerHTML = html;
@@ -1302,57 +425,71 @@
 
         // ========== FORM FUNCTIONS ==========
         function showAddBookForm() {
-            // Already overridden above
-            window.showAddBookForm();
+            if (!canEditBooks()) { showToast('Permission denied', 'error'); return; }
+            const modal = document.getElementById('modal');
+            document.getElementById('modalContent').innerHTML = `
+                <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add New Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="accessionNo" required placeholder="e.g., A001"></div>
+                <div class="form-group"><label>Title *</label><input type="text" id="title" required></div>
+                <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
+                <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC Number *</label><select id="ddcNumber" required><option value="">Select</option>${ddcMainClasses.map(d => `<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year" min="1900" max="2026"></div><div class="form-group"><label>Total Copies *</label><input type="number" id="totalCopies" value="1" min="1" required></div></div>
+                <button type="submit" class="btn btn-success" style="width:100%">Save Book</button></form>`;
+            modal.style.display = 'block';
         }
 
         function showAddMemberForm() {
-            window.showAddMemberForm();
+            if (!canEditMembers()) { showToast('Permission denied', 'error'); return; }
+            const modal = document.getElementById('modal');
+            document.getElementById('modalContent').innerHTML = `
+                <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add New Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID *</label><input type="text" id="memberId" required placeholder="e.g., M001"></div>
+                <div class="form-group"><label>Full Name *</label><input type="text" id="memberName" required></div>
+                <div class="form-row"><div class="form-group"><label>Category *</label><select id="memberCategory" required><option value="">Select</option><option value="Student">Student</option><option value="Teaching Staff">Teaching Staff</option><option value="Non-Teaching Staff">Non-Teaching Staff</option><option value="External Member">External Member</option></select></div>
+                <div class="form-group"><label>Phone *</label><input type="tel" id="memberPhone" required></div></div>
+                <div class="form-group"><label>Status *</label><select id="memberStatus" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+                <button type="submit" class="btn btn-success" style="width:100%">Save Member</button></form>`;
+            modal.style.display = 'block';
         }
 
         function showCheckoutForm() {
-            window.showCheckoutForm();
+            if (!canManageCirculation()) { showToast('Permission denied', 'error'); return; }
+            const modal = document.getElementById('modal');
+            document.getElementById('modalContent').innerHTML = `
+                <div class="modal-header"><h3><i class="fas fa-hand-holding"></i> New Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="checkoutAccessionNo" required placeholder="e.g., A001"></div>
+                <div class="form-group"><label>Member ID *</label><input type="text" id="checkoutMemberId" required placeholder="e.g., M001"></div>
+                <div class="form-row"><div class="form-group"><label>Issue Date *</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
+                <div class="form-group"><label>Loan Period *</label><select id="loanPeriod"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
+                <button type="submit" class="btn btn-success" style="width:100%">Process Checkout</button></form>`;
+            modal.style.display = 'block';
         }
 
+        // ========== DATA OPERATIONS ==========
         async function saveBook(event) {
             event.preventDefault();
             const bookData = {
-                accessionNo: document.getElementById('accessionNo').value,
-                title: document.getElementById('title').value,
-                author: document.getElementById('author').value,
-                isbn: document.getElementById('isbn').value || '',
-                subject: document.getElementById('subject').value || '',
-                ddcNumber: document.getElementById('ddcNumber').value,
+                accessionNo: document.getElementById('accessionNo').value, title: document.getElementById('title').value,
+                author: document.getElementById('author').value, isbn: document.getElementById('isbn').value || '',
+                subject: document.getElementById('subject').value || '', ddcNumber: document.getElementById('ddcNumber').value,
                 year: parseInt(document.getElementById('year').value) || null,
                 totalCopies: parseInt(document.getElementById('totalCopies').value),
                 availableCopies: parseInt(document.getElementById('totalCopies').value),
-                status: 'Available',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                status: 'Available', createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            try {
-                await db.collection('books').add(bookData);
-                closeModal();
-                loadCatalog();
-                showToast('Book added successfully!', 'success');
-            } catch (error) { alert('Error: ' + error.message); }
+            try { await db.collection('books').add(bookData); closeModal(); loadCatalog(); showToast('Book added!', 'success'); } 
+            catch (error) { alert('Error: ' + error.message); }
         }
 
         async function saveMember(event) {
             event.preventDefault();
             const memberData = {
-                memberId: document.getElementById('memberId').value,
-                name: document.getElementById('memberName').value,
-                category: document.getElementById('memberCategory').value,
-                phone: document.getElementById('memberPhone').value,
-                status: document.getElementById('memberStatus').value,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                memberId: document.getElementById('memberId').value, name: document.getElementById('memberName').value,
+                category: document.getElementById('memberCategory').value, phone: document.getElementById('memberPhone').value,
+                status: document.getElementById('memberStatus').value, createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            try {
-                await db.collection('members').add(memberData);
-                closeModal();
-                loadMembers();
-                showToast('Member added successfully!', 'success');
-            } catch (error) { alert('Error: ' + error.message); }
+            try { await db.collection('members').add(memberData); closeModal(); loadMembers(); showToast('Member added!', 'success'); } 
+            catch (error) { alert('Error: ' + error.message); }
         }
 
         async function processCheckout(event) {
@@ -1362,117 +499,79 @@
             const issueDate = new Date(document.getElementById('issueDate').value);
             const dueDate = new Date(issueDate);
             dueDate.setDate(dueDate.getDate() + parseInt(document.getElementById('loanPeriod').value));
-            
             try {
                 const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
                 if (booksSnapshot.empty) { alert('Book not found'); return; }
-                const bookDoc = booksSnapshot.docs[0];
-                const bookData = bookDoc.data();
-                if (bookData.availableCopies <= 0) { alert('No copies available.'); return; }
-                
+                const bookDoc = booksSnapshot.docs[0], bookData = bookDoc.data();
+                if (bookData.availableCopies <= 0) { alert('No copies available'); return; }
                 const membersSnapshot = await db.collection('members').where('memberId', '==', memberId).where('status', '==', 'Active').get();
                 if (membersSnapshot.empty) { alert('Member not active'); return; }
-                
                 const transactionId = 'T' + Date.now().toString().slice(-6);
-                await db.collection('transactions').add({
-                    transactionId, accessionNo, memberId, issueDate, dueDate, returnDate: null, status: 'Borrowed',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                const newAvailableCopies = bookData.availableCopies - 1;
-                await bookDoc.ref.update({ 
-                    status: newAvailableCopies > 0 ? 'Available' : 'Borrowed', 
-                    availableCopies: newAvailableCopies 
-                });
-                
-                closeModal();
-                showToast(`Checkout successful! Transaction ID: ${transactionId}`, 'success');
-                loadCirculation();
-                loadCatalog();
-            } catch (error) { 
-                console.error('Checkout error:', error);
-                alert('Error: ' + error.message); 
-            }
+                await db.collection('transactions').add({ transactionId, accessionNo, memberId, issueDate, dueDate, returnDate: null, status: 'Borrowed', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await bookDoc.ref.update({ status: bookData.availableCopies - 1 > 0 ? 'Available' : 'Borrowed', availableCopies: bookData.availableCopies - 1 });
+                closeModal(); showToast(`Checkout successful! ID: ${transactionId}`, 'success'); loadCirculation(); loadCatalog();
+            } catch (error) { alert('Error: ' + error.message); }
         }
 
         async function returnBook(transactionId, accessionNo) {
-            if (!confirm('Confirm book return?')) return;
+            if (!confirm('Confirm return?')) return;
             try {
                 const returnDate = new Date();
                 const transactionRef = db.collection('transactions').doc(transactionId);
                 const transactionDoc = await transactionRef.get();
                 const transactionData = transactionDoc.data();
                 await transactionRef.update({ returnDate, status: 'Returned' });
-                
                 const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
                 if (!booksSnapshot.empty) {
-                    const bookDoc = booksSnapshot.docs[0];
-                    const bookData = bookDoc.data();
-                    const newAvailableCopies = (bookData.availableCopies || 0) + 1;
-                    await bookDoc.ref.update({ 
-                        status: newAvailableCopies > 0 ? 'Available' : 'Borrowed', 
-                        availableCopies: newAvailableCopies 
-                    });
+                    const bookDoc = booksSnapshot.docs[0], bookData = bookDoc.data();
+                    await bookDoc.ref.update({ status: 'Available', availableCopies: (bookData.availableCopies || 0) + 1 });
                 }
-                
                 const dueDate = transactionData.dueDate.toDate();
                 if (returnDate > dueDate) {
                     const daysLate = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
                     const totalFine = daysLate * 500;
-                    await db.collection('fines').add({
-                        transactionId: transactionData.transactionId, dueDate, returnDate, daysLate, finePerDay: 500,
-                        totalFine, status: 'Unpaid', createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    showToast(`Book returned with fine of K${totalFine} (${daysLate} days late)`, 'warning');
-                } else {
-                    showToast('Book returned successfully!', 'success');
-                }
-                loadCirculation();
-                loadCatalog();
-            } catch (error) { 
-                console.error('Return error:', error);
-                alert('Error: ' + error.message); 
-            }
-        }
-
-        async function payFine(fineId) {
-            if (!confirm('Mark this fine as paid?')) return;
-            try {
-                await db.collection('fines').doc(fineId).update({ status: 'Paid', paidAt: firebase.firestore.FieldValue.serverTimestamp() });
-                loadFines();
-                showToast('Fine marked as paid', 'success');
+                    await db.collection('fines').add({ transactionId: transactionData.transactionId, dueDate, returnDate, daysLate, finePerDay: 500, totalFine, status: 'Unpaid', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    showToast(`Fine: K${totalFine} (${daysLate} days late)`, 'warning');
+                } else { showToast('Book returned!', 'success'); }
+                loadCirculation(); loadCatalog();
             } catch (error) { alert('Error: ' + error.message); }
         }
 
+        async function payFine(fineId) {
+            if (!confirm('Mark as paid?')) return;
+            try { await db.collection('fines').doc(fineId).update({ status: 'Paid', paidAt: firebase.firestore.FieldValue.serverTimestamp() }); loadFines(); showToast('Fine paid', 'success'); } 
+            catch (error) { alert('Error: ' + error.message); }
+        }
+
         async function deleteBook(bookId) {
-            window.deleteBook(bookId);
+            if (!canDeleteData()) { showToast('Permission denied: Only admins can delete books', 'error'); return; }
+            if (confirm('Delete this book?')) { try { await db.collection('books').doc(bookId).delete(); loadCatalog(); showToast('Book deleted', 'success'); } catch (error) { alert('Error: ' + error.message); } }
         }
 
         async function deleteMember(memberId) {
-            window.deleteMember(memberId);
+            if (!canDeleteData()) { showToast('Permission denied: Only admins can delete members', 'error'); return; }
+            if (confirm('Delete this member?')) { try { await db.collection('members').doc(memberId).delete(); loadMembers(); showToast('Member deleted', 'success'); } catch (error) { alert('Error: ' + error.message); } }
         }
 
         async function editBook(bookId) {
+            if (!canEditBooks()) { showToast('Permission denied', 'error'); return; }
             try {
                 const bookDoc = await db.collection('books').doc(bookId).get();
                 const book = bookDoc.data();
-                if (!book) { alert('Book not found'); return; }
-                
                 const modal = document.getElementById('modal');
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = `
+                document.getElementById('modalContent').innerHTML = `
                     <div class="modal-header"><h3><i class="fas fa-edit"></i> Edit Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
                     <form onsubmit="updateBook(event, '${bookId}')">
-                        <div class="form-group"><label>Accession Number *</label><input type="text" id="editAccessionNo" value="${book.accessionNo || ''}" required></div>
-                        <div class="form-group"><label>Title *</label><input type="text" id="editTitle" value="${book.title || ''}" required></div>
-                        <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="editAuthor" value="${book.author || ''}" required></div><div class="form-group"><label>ISBN</label><input type="text" id="editIsbn" value="${book.isbn || ''}"></div></div>
-                        <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="editSubject" value="${book.subject || ''}"></div><div class="form-group"><label>DDC Number *</label><select id="editDdcNumber" required>${ddcMainClasses.map(d => `<option value="${d.number}" ${book.ddcNumber === d.number ? 'selected' : ''}>${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                        <div class="form-group"><label>Accession Number</label><input type="text" id="editAccessionNo" value="${book.accessionNo || ''}" required></div>
+                        <div class="form-group"><label>Title</label><input type="text" id="editTitle" value="${book.title || ''}" required></div>
+                        <div class="form-row"><div class="form-group"><label>Author</label><input type="text" id="editAuthor" value="${book.author || ''}" required></div><div class="form-group"><label>ISBN</label><input type="text" id="editIsbn" value="${book.isbn || ''}"></div></div>
+                        <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="editSubject" value="${book.subject || ''}"></div><div class="form-group"><label>DDC Number</label><select id="editDdcNumber" required>${ddcMainClasses.map(d => `<option value="${d.number}" ${book.ddcNumber === d.number ? 'selected' : ''}>${d.number} - ${d.name}</option>`).join('')}</select></div></div>
                         <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="editYear" value="${book.year || ''}" min="1900" max="2026"></div><div class="form-group"><label>Total Copies</label><input type="number" id="editTotalCopies" value="${book.totalCopies || 1}" min="1" required></div></div>
-                        <div class="form-group"><label>Available Copies</label><input type="number" id="editAvailableCopies" value="${book.availableCopies || book.totalCopies || 1}" min="0" required><small>Available copies cannot exceed total copies</small></div>
-                        <div class="form-row"><button type="submit" class="btn btn-success" style="width:48%"><i class="fas fa-save"></i> Update Book</button><button type="button" class="btn btn-danger" onclick="closeModal()" style="width:48%">Cancel</button></div>
+                        <div class="form-group"><label>Available Copies</label><input type="number" id="editAvailableCopies" value="${book.availableCopies || book.totalCopies || 1}" min="0" required></div>
+                        <div class="form-row"><button type="submit" class="btn btn-success" style="width:48%">Update</button><button type="button" class="btn btn-danger" onclick="closeModal()" style="width:48%">Cancel</button></div>
                     </form>`;
                 modal.style.display = 'block';
-            } catch (error) { alert('Error loading book data'); }
+            } catch (error) { alert('Error loading book'); }
         }
 
         async function updateBook(event, bookId) {
@@ -1480,48 +579,21 @@
             const totalCopies = parseInt(document.getElementById('editTotalCopies').value);
             const availableCopies = parseInt(document.getElementById('editAvailableCopies').value);
             if (availableCopies > totalCopies) { alert('Available copies cannot exceed total copies'); return; }
-            
             await db.collection('books').doc(bookId).update({
-                accessionNo: document.getElementById('editAccessionNo').value,
-                title: document.getElementById('editTitle').value,
-                author: document.getElementById('editAuthor').value,
-                isbn: document.getElementById('editIsbn').value || '',
-                subject: document.getElementById('editSubject').value || '',
-                ddcNumber: document.getElementById('editDdcNumber').value,
-                year: parseInt(document.getElementById('editYear').value) || null,
-                totalCopies: totalCopies,
-                availableCopies: availableCopies,
-                status: availableCopies > 0 ? 'Available' : 'Borrowed',
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                accessionNo: document.getElementById('editAccessionNo').value, title: document.getElementById('editTitle').value,
+                author: document.getElementById('editAuthor').value, isbn: document.getElementById('editIsbn').value || '',
+                subject: document.getElementById('editSubject').value || '', ddcNumber: document.getElementById('editDdcNumber').value,
+                year: parseInt(document.getElementById('editYear').value) || null, totalCopies, availableCopies,
+                status: availableCopies > 0 ? 'Available' : 'Borrowed', updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            closeModal();
-            loadCatalog();
-            showToast('Book updated successfully!', 'success');
+            closeModal(); loadCatalog(); showToast('Book updated!', 'success');
         }
 
         // ========== SEARCH FUNCTIONS ==========
-        function searchCatalog() {
-            const term = document.getElementById('catalogSearch')?.value.toLowerCase() || '';
-            const rows = document.querySelectorAll('#catalogTableBody tr');
-            rows.forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
-        }
-
-        function searchMembers() {
-            const term = document.getElementById('memberSearch')?.value.toLowerCase() || '';
-            const rows = document.querySelectorAll('#membersTableBody tr');
-            rows.forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
-        }
-
-        function searchCirculation() {
-            const term = document.getElementById('circulationSearch')?.value.toLowerCase() || '';
-            const rows = document.querySelectorAll('#circulationTableBody tr');
-            rows.forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
-        }
-
-        function filterByDDC(ddc) {
-            const searchBox = document.getElementById('catalogSearch');
-            if (searchBox) { searchBox.value = ddc; searchCatalog(); }
-        }
+        function searchCatalog() { const term = document.getElementById('catalogSearch')?.value.toLowerCase() || ''; document.querySelectorAll('#catalogTableBody tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none'); }
+        function searchMembers() { const term = document.getElementById('memberSearch')?.value.toLowerCase() || ''; document.querySelectorAll('#membersTableBody tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none'); }
+        function searchCirculation() { const term = document.getElementById('circulationSearch')?.value.toLowerCase() || ''; document.querySelectorAll('#circulationTableBody tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none'); }
+        function filterByDDC(ddc) { const searchBox = document.getElementById('catalogSearch'); if (searchBox) { searchBox.value = ddc; searchCatalog(); } }
 
         // ========== NAVIGATION ==========
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1540,10 +612,7 @@
             });
         });
 
-        window.onclick = function(event) {
-            const modal = document.getElementById('modal');
-            if (event.target === modal) modal.style.display = 'none';
-        };
+        window.onclick = function(event) { const modal = document.getElementById('modal'); if (event.target === modal) modal.style.display = 'none'; };
 
         // ========== INITIALIZE SAMPLE DATA ==========
         setTimeout(async () => {
@@ -1565,55 +634,17 @@
         (function() {
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
-            
             if (!menuToggle || !sidebar) return;
-            
             const overlay = document.createElement('div');
             overlay.className = 'menu-overlay';
             document.body.appendChild(overlay);
-            
-            function openMenu() {
-                sidebar.classList.add('open');
-                overlay.style.display = 'block';
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeMenu() {
-                sidebar.classList.remove('open');
-                overlay.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-            
-            menuToggle.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (sidebar.classList.contains('open')) {
-                    closeMenu();
-                } else {
-                    openMenu();
-                }
-            });
-            
+            function openMenu() { sidebar.classList.add('open'); overlay.style.display = 'block'; document.body.style.overflow = 'hidden'; }
+            function closeMenu() { sidebar.classList.remove('open'); overlay.style.display = 'none'; document.body.style.overflow = ''; }
+            menuToggle.addEventListener('click', function(e) { e.stopPropagation(); if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
             overlay.addEventListener('click', closeMenu);
-            
-            document.querySelectorAll('.nav-item').forEach(function(item) {
-                item.addEventListener('click', function() {
-                    if (window.innerWidth <= 768) {
-                        closeMenu();
-                    }
-                });
-            });
-            
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
-                    closeMenu();
-                }
-            });
-            
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-                    closeMenu();
-                }
-            });
+            document.querySelectorAll('.nav-item').forEach(function(item) { item.addEventListener('click', function() { if (window.innerWidth <= 768) closeMenu(); }); });
+            window.addEventListener('resize', function() { if (window.innerWidth > 768 && sidebar.classList.contains('open')) closeMenu(); });
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && sidebar.classList.contains('open')) closeMenu(); });
         })();
     </script>
 </body>
