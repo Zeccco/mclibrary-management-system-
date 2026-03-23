@@ -1192,32 +1192,69 @@
         }
 
         async function processCheckout(event) {
-            event.preventDefault();
-            const accessionNo = document.getElementById('checkoutAccessionNo').value;
-            const memberId = document.getElementById('checkoutMemberId').value;
-            const issueDate = new Date(document.getElementById('issueDate').value);
-            const dueDate = new Date(issueDate);
-            dueDate.setDate(dueDate.getDate() + parseInt(document.getElementById('loanPeriod').value));
-            
-            try {
-                const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).where('status', '==', 'Available').get();
-                if (booksSnapshot.empty) { alert('Book not available'); return; }
-                const bookDoc = booksSnapshot.docs[0];
-                const membersSnapshot = await db.collection('members').where('memberId', '==', memberId).where('status', '==', 'Active').get();
-                if (membersSnapshot.empty) { alert('Member not active'); return; }
-                
-                const transactionId = 'T' + Date.now().toString().slice(-6);
-                await db.collection('transactions').add({
-                    transactionId, accessionNo, memberId, issueDate, dueDate, returnDate: null, status: 'Borrowed',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                await bookDoc.ref.update({ status: 'Borrowed', availableCopies: bookDoc.data().availableCopies - 1 });
-                closeModal();
-                showToast('Checkout successful! ID: ' + transactionId, 'success');
-                loadCirculation();
-            } catch (error) { alert('Error: ' + error.message); }
+    event.preventDefault();
+    const accessionNo = document.getElementById('checkoutAccessionNo').value;
+    const memberId = document.getElementById('checkoutMemberId').value;
+    const issueDate = new Date(document.getElementById('issueDate').value);
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + parseInt(document.getElementById('loanPeriod').value));
+    
+    try {
+        // Find the book by accession number (regardless of status)
+        const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
+        
+        if (booksSnapshot.empty) {
+            alert('Book not found');
+            return;
         }
-
+        
+        const bookDoc = booksSnapshot.docs[0];
+        const bookData = bookDoc.data();
+        
+        // Check if there are available copies
+        if (bookData.availableCopies <= 0) {
+            alert('No copies available for checkout. All ' + bookData.totalCopies + ' copies are borrowed.');
+            return;
+        }
+        
+        // Check if member is active
+        const membersSnapshot = await db.collection('members').where('memberId', '==', memberId).where('status', '==', 'Active').get();
+        if (membersSnapshot.empty) {
+            alert('Member is not active or not found');
+            return;
+        }
+        
+        // Create transaction
+        const transactionId = 'T' + Date.now().toString().slice(-6);
+        await db.collection('transactions').add({
+            transactionId, 
+            accessionNo, 
+            memberId, 
+            issueDate, 
+            dueDate, 
+            returnDate: null, 
+            status: 'Borrowed',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Update book - decrease available copies
+        const newAvailableCopies = bookData.availableCopies - 1;
+        const newStatus = newAvailableCopies > 0 ? 'Available' : 'Borrowed';
+        
+        await bookDoc.ref.update({ 
+            status: newStatus, 
+            availableCopies: newAvailableCopies 
+        });
+        
+        closeModal();
+        showToast(`Checkout successful! ${newAvailableCopies} copy/copies remaining. Transaction ID: ${transactionId}`, 'success');
+        loadCirculation();
+        loadCatalog(); // Refresh catalog to show updated available copies
+    } catch (error) { 
+        console.error('Checkout error:', error);
+        alert('Error: ' + error.message); 
+    }
+}
         async function returnBook(transactionId, accessionNo) {
             if (!confirm('Confirm book return?')) return;
             try {
