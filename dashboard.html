@@ -83,6 +83,7 @@
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .search-box { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
         .search-box input { flex: 1; padding: 12px 20px; border: 2px solid var(--gray); border-radius: var(--radius-md); font-size: 14px; min-width: 200px; }
+        .search-box button { padding: 12px 24px; width: auto; }
         .ddc-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 25px; }
         .ddc-class { background: var(--white); padding: 12px 5px; border-radius: var(--radius-md); text-align: center; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s; border: 2px solid transparent; }
         .ddc-class:hover { border-color: var(--primary); transform: translateY(-2px); }
@@ -260,15 +261,36 @@
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
+        // ========== DASHBOARD with Recent Transactions ==========
         async function loadDashboard() {
             const contentArea = document.getElementById('contentArea');
-            contentArea.innerHTML = '<div class="spinner"></div><p>Loading...</p>';
+            contentArea.innerHTML = '<div class="spinner"></div><p>Loading dashboard...</p>';
             try {
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
                 let totalBooks = 0, totalAvailable = 0;
                 booksSnapshot.forEach(doc => { const b = doc.data(); totalBooks += b.totalCopies || 0; totalAvailable += b.availableCopies || 0; });
+                
+                // Get recent transactions
+                let recentTransactionsHtml = '';
+                try {
+                    const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
+                    recent.forEach(doc => {
+                        const t = doc.data();
+                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
+                        recentTransactionsHtml += `
+                            <tr>
+                                <td>${t.transactionId || 'N/A'}</td>
+                                <td>${t.accessionNo || 'N/A'}</td>
+                                <td>${t.memberId || 'N/A'}</td>
+                                <td>${issueDate}</td>
+                                <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
+                            </tr>
+                        `;
+                    });
+                } catch(e) { console.log('No transactions'); }
+                
                 const html = `
                     <div class="stats-container">
                         <div class="stat-card"><i class="fas fa-book"></i><h3>Total Books</h3><div class="stat-number">${totalBooks}</div><small>${booksSnapshot.size} titles</small></div>
@@ -276,6 +298,15 @@
                         <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed</h3><div class="stat-number">${totalBooks - totalAvailable}</div></div>
                         <div class="stat-card"><i class="fas fa-users"></i><h3>Members</h3><div class="stat-number">${membersSnapshot.size}</div></div>
                         <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${borrowedSnapshot.size}</div></div>
+                    </div>
+                    <div class="form-container">
+                        <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
+                                <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="quick-actions">
                         <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
@@ -286,79 +317,184 @@
             } catch (error) { contentArea.innerHTML = '<p>Error loading dashboard</p>'; }
         }
 
+        // ========== CATALOG with Search ==========
         async function loadCatalog() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading catalog...</p>';
             try {
                 const books = await db.collection('books').orderBy('accessionNo').get();
-                let html = '<div class="form-container"><div class="section-header"><h2><i class="fas fa-books"></i> Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()">Add Book</button></div><div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>DDC</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                let booksHtml = '';
                 books.forEach(doc => {
                     const b = doc.data();
                     const available = b.availableCopies || 0;
-                    html += `<tr><td><strong>${b.accessionNo}</strong></td><td>${b.title}</td><td>${b.author}</td><td>${b.ddcNumber}</td><td>${b.totalCopies}</td><td style="color:${available>0?'green':'red'}">${available}</td><td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span></td><td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button></td></tr>`;
+                    booksHtml += `<tr class="catalog-row" data-title="${(b.title || '').toLowerCase()}" data-author="${(b.author || '').toLowerCase()}" data-accession="${(b.accessionNo || '').toLowerCase()}" data-isbn="${(b.isbn || '').toLowerCase()}">
+                        <td><strong>${b.accessionNo}</strong></td>
+                        <td>${b.title}</td>
+                        <td>${b.author}</td>
+                        <td>${b.isbn || '-'}</td>
+                        <td>${b.subject || '-'}</td>
+                        <td>${b.ddcNumber || '-'}</td>
+                        <td>${b.year || '-'}</td>
+                        <td>${b.totalCopies}</td>
+                        <td style="color:${available>0?'green':'red'}">${available}</td>
+                        <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span></td>
+                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button></td>
+                    </tr>`;
                 });
-                html += '</tbody></table></div></div>';
+                const html = `<div class="form-container">
+                    <div class="section-header"><h2><i class="fas fa-books"></i> Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()">Add Book</button></div>
+                    <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()">Search</button> <button class="btn btn-outline" onclick="clearCatalogSearch()">Clear</button></div>
+                    <div class="ddc-nav">${ddcMainClasses.map(d => `<div class="ddc-class" onclick="filterByDDC('${d.number}')"><strong>${d.number}</strong><br><small>${d.name}</small></div>`).join('')}</div>
+                    <div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody></table></div>
+                </div>`;
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
+            } catch (error) { contentArea.innerHTML = '<p>Error loading catalog</p>'; }
         }
 
+        function searchCatalog() {
+            const term = document.getElementById('catalogSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#catalogTableBody tr');
+            rows.forEach(row => {
+                const title = row.dataset.title || '';
+                const author = row.dataset.author || '';
+                const accession = row.dataset.accession || '';
+                const isbn = row.dataset.isbn || '';
+                if (title.includes(term) || author.includes(term) || accession.includes(term) || isbn.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function clearCatalogSearch() {
+            document.getElementById('catalogSearch').value = '';
+            document.querySelectorAll('#catalogTableBody tr').forEach(row => row.style.display = '');
+        }
+
+        function filterByDDC(ddc) {
+            const rows = document.querySelectorAll('#catalogTableBody tr');
+            rows.forEach(row => {
+                const ddcCell = row.cells[5]?.textContent.trim();
+                if (ddcCell === ddc || ddc === '') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            document.getElementById('catalogSearch').value = '';
+        }
+
+        // ========== MEMBERS with Search ==========
         async function loadMembers() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading members...</p>';
             try {
                 const members = await db.collection('members').orderBy('memberId').get();
-                let html = '<div class="form-container"><div class="section-header"><h2><i class="fas fa-users"></i> Members</h2><button class="btn btn-success" onclick="showAddMemberForm()">Add Member</button></div><div class="table-container"><table><thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                let membersHtml = '';
                 members.forEach(doc => {
                     const m = doc.data();
-                    html += `<tr><td><strong>${m.memberId}</strong></td><td>${m.name}</td><td>${m.category}</td><td>${m.phone}</td><td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span></td><td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button></td></tr>`;
+                    membersHtml += `<tr class="member-row" data-name="${(m.name || '').toLowerCase()}" data-id="${(m.memberId || '').toLowerCase()}" data-phone="${(m.phone || '').toLowerCase()}">
+                        <td><strong>${m.memberId}</strong></td>
+                        <td>${m.name}</td>
+                        <td>${m.category}</td>
+                        <td>${m.phone}</td>
+                        <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span></td>
+                        <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button></td>
+                    </tr>`;
                 });
-                html += '</tbody></table></div></div>';
+                const html = `<div class="form-container">
+                    <div class="section-header"><h2><i class="fas fa-users"></i> Members</h2><button class="btn btn-success" onclick="showAddMemberForm()">Add Member</button></div>
+                    <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name, ID, or phone..."><button class="btn btn-primary" onclick="searchMembers()">Search</button> <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button></div>
+                    <div class="table-container"><table><thead><tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="membersTableBody">${membersHtml || '<tr><td colspan="6">No members</td></tr>'}</tbody></table></div>
+                </div>`;
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
+            } catch (error) { contentArea.innerHTML = '<p>Error loading members</p>'; }
         }
 
+        function searchMembers() {
+            const term = document.getElementById('memberSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#membersTableBody tr');
+            rows.forEach(row => {
+                const name = row.dataset.name || '';
+                const id = row.dataset.id || '';
+                const phone = row.dataset.phone || '';
+                if (name.includes(term) || id.includes(term) || phone.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function clearMemberSearch() {
+            document.getElementById('memberSearch').value = '';
+            document.querySelectorAll('#membersTableBody tr').forEach(row => row.style.display = '');
+        }
+
+        // ========== CIRCULATION ==========
         async function loadCirculation() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading circulation...</p>';
             try {
                 const transactions = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()">Checkout</button></div>
-                    <div class="search-box"><input type="text" id="circSearch" placeholder="Search..."><button class="btn btn-primary" onclick="searchCirc()">Search</button></div>
-                    <div class="table-container"><table><thead><tr><th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
+                    <div class="search-box"><input type="text" id="circSearch" placeholder="Search by ID, accession, or member..."><button class="btn btn-primary" onclick="searchCirc()">Search</button></div>
+                    <div class="table-container"><table><thead><tr><th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th></tr></thead><tbody id="circTableBody">`;
                 transactions.forEach(doc => {
                     const t = doc.data();
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
-                    html += `<tr><td>${t.transactionId}</td><td>${t.accessionNo}</td><td>${t.memberId}</td><td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}</td><td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}</td><td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}</td><td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span></td><td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}</td></tr>`;
+                    html += `<tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
+                        <td>${t.transactionId}</td>
+                        <td>${t.accessionNo}</td>
+                        <td>${t.memberId}</td>
+                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}</td>
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}  </td>
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  </td>
+                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  </td>
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  </td>
+                     </tr>`;
                 });
-                html += '</tbody></table></div></div>';
+                html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
         }
 
         function searchCirc() {
-            const term = document.getElementById('circSearch')?.value.toLowerCase() || '';
-            document.querySelectorAll('#circulationTableBody tr, .table-container tbody tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
+            const term = document.getElementById('circSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#circTableBody tr');
+            rows.forEach(row => {
+                const id = row.dataset.id || '';
+                const accession = row.dataset.accession || '';
+                const member = row.dataset.member || '';
+                if (id.includes(term) || accession.includes(term) || member.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
 
+        // ========== FINES ==========
         async function loadFines() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading fines...</p>';
             try {
                 const fines = await db.collection('fines').get();
-                let total = 0, html = `<div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Fines</h3><div class="stat-number">K0</div></div></div><div class="form-container"><div class="section-header"><h2><i class="fas fa-exclamation-triangle"></i> Fines</h2></div><div class="table-container"><table><thead><tr><th>Transaction</th><th>Due</th><th>Return</th><th>Days Late</th><th>Fine</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
+                let total = 0, html = `<div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Fines</h3><div class="stat-number">K0</div></div></div><div class="form-container"><div class="section-header"><h2><i class="fas fa-exclamation-triangle"></i> Fines</h2></div><div class="table-container">   <thead> <tr><th>Transaction</th><th>Due</th><th>Return</th><th>Days Late</th><th>Fine</th><th>Status</th><th>Action</th></tr> </thead><tbody>`;
                 fines.forEach(doc => {
                     const f = doc.data();
                     total += f.totalFine || 0;
                     html += `<tr><td>${f.transactionId}</td><td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.daysLate || 0}</td><td>K${f.totalFine || 0}</td><td><span class="badge badge-${f.status==='Paid'?'available':'warning'}">${f.status||'Unpaid'}</span></td><td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : 'Paid'}</td></tr>`;
                 });
-                html += `</tbody></table></div></div>`;
+                html += `</tbody> </div></div>`;
                 html = html.replace('K0', `K${total}`);
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
         }
 
         function loadDDCClasses() {
-            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Classes</h2></div><div class="table-container"><table><thead><tr><th>Class</th><th>Name</th><th>Description</th></tr></thead><tbody>${ddcMainClasses.map(d => `<tr><td><strong>${d.number}</strong></td><td>${d.name}</td><td>Books about ${d.name.toLowerCase()}</td></tr>`).join('')}</tbody></table></div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><p>The Dewey Decimal Classification organizes knowledge into ten main classes.</p></div></div>`;
+            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Classes</h2></div><div class="table-container">   <thead> <tr><th>Class</th><th>Name</th><th>Description</th></tr> </thead><tbody>${ddcMainClasses.map(d => `<tr><td><strong>${d.number}</strong></td><td>${d.name}</td><td>Books about ${d.name.toLowerCase()}</td></tr>`).join('')}</tbody> </div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><p>The Dewey Decimal Classification organizes knowledge into ten main classes.</p></div></div>`;
             document.getElementById('contentArea').innerHTML = html;
         }
 
@@ -450,7 +586,7 @@
                 const tid = 'T' + Date.now().toString().slice(-6);
                 await db.collection('transactions').add({ transactionId: tid, accessionNo: acc, memberId: mem, issueDate: issue, dueDate: due, returnDate: null, status: 'Borrowed', createdAt: new Date() });
                 await bookDoc.ref.update({ availableCopies: bookData.availableCopies - 1, status: bookData.availableCopies - 1 > 0 ? 'Available' : 'Borrowed' });
-                closeModal(); showToast(`Checkout successful! ID: ${tid}`, 'success'); loadCirculation(); loadCatalog();
+                closeModal(); showToast(`Checkout successful! ID: ${tid}`, 'success'); loadCirculation(); loadCatalog(); loadDashboard();
             } catch (error) { alert('Error: ' + error.message); }
         }
 
@@ -472,7 +608,7 @@
                     await db.collection('fines').add({ transactionId: t.transactionId, dueDate: t.dueDate, returnDate, daysLate: days, finePerDay: 500, totalFine: fine, status: 'Unpaid', createdAt: new Date() });
                     showToast(`Fine: K${fine} (${days} days late)`, 'warning');
                 } else { showToast('Book returned!', 'success'); }
-                loadCirculation(); loadCatalog();
+                loadCirculation(); loadCatalog(); loadDashboard();
             } catch (error) { alert('Error: ' + error.message); }
         }
 
