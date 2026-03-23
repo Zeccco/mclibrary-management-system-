@@ -824,65 +824,104 @@
         }
 
         // ========== DASHBOARD ==========
-        async function loadDashboard() {
-            const contentArea = document.getElementById('contentArea');
-            contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading dashboard...</p></div>';
+        // ========== DASHBOARD ==========
+async function loadDashboard() {
+    const contentArea = document.getElementById('contentArea');
+    contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading dashboard...</p></div>';
+    
+    try {
+        const booksSnapshot = await db.collection('books').get();
+        const membersSnapshot = await db.collection('members').get();
+        const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
+
+        // Calculate TOTAL PHYSICAL BOOKS (sum of all copies)
+        let totalBooksCount = 0;
+        let totalAvailableCopies = 0;
+        let totalBorrowedCopies = 0;
+        
+        booksSnapshot.forEach(doc => {
+            const book = doc.data();
+            const totalCopies = book.totalCopies || 0;
+            const availableCopies = book.availableCopies || 0;
             
-            try {
-                const booksSnapshot = await db.collection('books').get();
-                const membersSnapshot = await db.collection('members').get();
-                const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
+            totalBooksCount += totalCopies;
+            totalAvailableCopies += availableCopies;
+            totalBorrowedCopies += (totalCopies - availableCopies);
+        });
 
-                const totalBooks = booksSnapshot.size;
-                const availableBooks = booksSnapshot.docs.filter(d => d.data().status === 'Available').length;
-                const borrowedBooks = booksSnapshot.docs.filter(d => d.data().status === 'Borrowed').length;
-                const totalMembers = membersSnapshot.size;
-                const activeBorrowings = borrowedSnapshot.size;
+        const totalMembers = membersSnapshot.size;
+        const activeBorrowings = borrowedSnapshot.size;
 
-                let transactionsHtml = '';
-                try {
-                    const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
-                    recent.forEach(doc => {
-                        const t = doc.data();
-                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                        transactionsHtml += `
-
-
-                           <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
-                    });
-                } catch(e) {}
-
-                const html = `
-                    <div class="stats-container">
-                        <div class="stat-card"><i class="fas fa-book"></i><h3>Total Books</h3><div class="stat-number">${totalBooks}</div></div>
-                        <div class="stat-card"><i class="fas fa-check-circle"></i><h3>Available Books</h3><div class="stat-number">${availableBooks}</div></div>
-                        <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed Books</h3><div class="stat-number">${borrowedBooks}</div></div>
-                        <div class="stat-card"><i class="fas fa-users"></i><h3>Total Members</h3><div class="stat-number">${totalMembers}</div></div>
-                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${activeBorrowings}</div></div>
-                    </div>
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr>
-                                </thead>
-                                <tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="quick-actions">
-                        <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
-                        <button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button>
-                        <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
-                    </div>
+        let transactionsHtml = '';
+        try {
+            const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
+            recent.forEach(doc => {
+                const t = doc.data();
+                const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
+                transactionsHtml += `
+                    <tr>
+                        <td>${t.transactionId || 'N/A'}</td>
+                        <td>${t.accessionNo || 'N/A'}</td>
+                        <td>${t.memberId || 'N/A'}</td>
+                        <td>${issueDate}</td>
+                        <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
+                    </tr>
                 `;
-                contentArea.innerHTML = html;
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard. Please check your Firebase connection.</div>';
-            }
-        }
+            });
+        } catch(e) {}
+
+        const html = `
+            <div class="stats-container">
+                <div class="stat-card">
+                    <i class="fas fa-book"></i>
+                    <h3>Total Books (Copies)</h3>
+                    <div class="stat-number">${totalBooksCount}</div>
+                    <small style="color: #6c757d;">${booksSnapshot.size} unique titles</small>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Available Books</h3>
+                    <div class="stat-number">${totalAvailableCopies}</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-exchange-alt"></i>
+                    <h3>Borrowed Books</h3>
+                    <div class="stat-number">${totalBorrowedCopies}</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Total Members</h3>
+                    <div class="stat-number">${totalMembers}</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Active Borrowings</h3>
+                    <div class="stat-number">${activeBorrowings}</div>
+                </div>
+            </div>
+            <div class="form-container">
+                <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="quick-actions">
+                <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
+                <button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button>
+                <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
+            </div>
+        `;
+        contentArea.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard. Please check your Firebase connection.</div>';
+    }
+}
 
         // ========== CATALOG ==========
         async function loadCatalog() {
