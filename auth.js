@@ -67,7 +67,7 @@ const PERMISSIONS = {
     }
 };
 
-// Global variable to store current user role
+// Global variables
 let currentUserRole = null;
 let currentUserData = null;
 
@@ -78,10 +78,9 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         const currentPage = window.location.pathname.split('/').pop();
         
-        // Fetch user role from Firestore
+        // Load user role from Firestore
         await loadCurrentUserRole(user.uid);
         
-        // Redirect logic
         if (currentPage === 'index.html' || currentPage === 'signup.html' || 
             currentPage === 'forgot-password.html' || currentPage === '') {
             window.location.href = 'dashboard.html';
@@ -112,8 +111,20 @@ async function loadCurrentUserRole(userId) {
             currentUserData = userDoc.data();
             currentUserRole = currentUserData.role || ROLES.STAFF;
         } else {
-            // If no role set, default to STAFF
-            currentUserRole = ROLES.STAFF;
+            // Check if this is the first user
+            const usersSnapshot = await db.collection('users').limit(1).get();
+            if (usersSnapshot.empty) {
+                currentUserRole = ROLES.ADMIN;
+                await db.collection('users').doc(userId).set({
+                    email: auth.currentUser.email,
+                    name: auth.currentUser.email.split('@')[0],
+                    role: ROLES.ADMIN,
+                    status: 'active',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } else {
+                currentUserRole = ROLES.STAFF;
+            }
         }
         return currentUserRole;
     } catch (error) {
@@ -137,15 +148,18 @@ async function hasPermission(permission) {
 }
 
 function canEditBooks() {
-    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+    const role = getCurrentUserRole();
+    return role === ROLES.ADMIN || role === ROLES.LIBRARIAN;
 }
 
 function canEditMembers() {
-    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+    const role = getCurrentUserRole();
+    return role === ROLES.ADMIN || role === ROLES.LIBRARIAN;
 }
 
 function canManageCirculation() {
-    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+    const role = getCurrentUserRole();
+    return role === ROLES.ADMIN || role === ROLES.LIBRARIAN;
 }
 
 function canDeleteData() {
@@ -171,29 +185,22 @@ async function getAllUsers() {
     if (!isAdmin()) {
         throw new Error('Permission denied: Only admins can view users');
     }
-    
     const usersSnapshot = await db.collection('users').get();
-    return usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    }));
+    return usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 async function updateUserRole(userId, newRole) {
     if (!isAdmin()) {
         throw new Error('Permission denied: Only admins can update roles');
     }
-    
     if (!Object.values(ROLES).includes(newRole)) {
         throw new Error('Invalid role');
     }
-    
     await db.collection('users').doc(userId).update({
         role: newRole,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: auth.currentUser?.uid
     });
-    
     return true;
 }
 
@@ -201,22 +208,16 @@ async function createStaffAccount(email, password, name, role = ROLES.STAFF) {
     if (!isAdmin()) {
         throw new Error('Permission denied: Only admins can create staff accounts');
     }
-    
     try {
-        // Create Firebase Auth user
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        
-        // Create user profile with role
         await db.collection('users').doc(userCredential.user.uid).set({
             name: name,
             email: email,
             role: role,
             status: 'active',
             createdBy: auth.currentUser?.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: null
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
         showToast(`${name} (${role}) account created successfully!`, 'success');
         return true;
     } catch (error) {
@@ -230,12 +231,9 @@ async function deleteUserAccount(userId) {
     if (!isAdmin()) {
         throw new Error('Permission denied: Only admins can delete users');
     }
-    
-    // Cannot delete your own account
     if (userId === auth.currentUser?.uid) {
         throw new Error('Cannot delete your own account');
     }
-    
     await db.collection('users').doc(userId).delete();
     return true;
 }
@@ -262,14 +260,10 @@ async function loginUser(email, password) {
     try {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         
-        // Check if user exists in Firestore
         const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
-        
         if (!userDoc.exists) {
-            // First user becomes admin, others become staff
             const usersSnapshot = await db.collection('users').limit(1).get();
             const isFirstUser = usersSnapshot.empty;
-            
             await db.collection('users').doc(userCredential.user.uid).set({
                 name: email.split('@')[0],
                 email: email,
@@ -279,26 +273,20 @@ async function loginUser(email, password) {
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             });
         } else {
-            // Update last login
             await db.collection('users').doc(userCredential.user.uid).update({
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
         
-        // Load role
         await loadCurrentUserRole(userCredential.user.uid);
-        
         showToast('Login successful! Redirecting...', 'success');
-        
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1000);
-        
         return true;
     } catch (error) {
         console.error('Login error:', error);
         let errorMessage = '';
-        
         switch (error.code) {
             case 'auth/user-not-found':
                 errorMessage = 'Account not found. Please sign up first.';
@@ -312,7 +300,6 @@ async function loginUser(email, password) {
             default:
                 errorMessage = error.message;
         }
-        
         if (errorElement) {
             errorElement.style.display = 'flex';
             errorElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + errorMessage;
@@ -359,7 +346,6 @@ async function signupUser(name, email, password, confirmPassword) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
-        // Check if this is the first user (becomes admin)
         const usersSnapshot = await db.collection('users').limit(1).get();
         const isFirstUser = usersSnapshot.empty;
         
@@ -373,16 +359,13 @@ async function signupUser(name, email, password, confirmPassword) {
         });
         
         showToast('Account created successfully! Redirecting...', 'success');
-        
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1500);
-        
         return true;
     } catch (error) {
         console.error('Signup error:', error);
         let errorMessage = '';
-        
         switch (error.code) {
             case 'auth/email-already-in-use':
                 errorMessage = 'Email already registered. Please login instead.';
@@ -393,7 +376,6 @@ async function signupUser(name, email, password, confirmPassword) {
             default:
                 errorMessage = error.message;
         }
-        
         if (errorElement) {
             errorElement.style.display = 'flex';
             errorElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + errorMessage;
@@ -433,7 +415,6 @@ async function resetPassword(email) {
     } catch (error) {
         console.error('Reset error:', error);
         let errorMessage = '';
-        
         switch (error.code) {
             case 'auth/user-not-found':
                 errorMessage = 'No account found with this email.';
@@ -441,7 +422,6 @@ async function resetPassword(email) {
             default:
                 errorMessage = error.message;
         }
-        
         if (errorElement) {
             errorElement.style.display = 'flex';
             errorElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + errorMessage;
@@ -513,8 +493,6 @@ window.getCurrentUser = getCurrentUser;
 window.getUserProfile = getUserProfile;
 window.protectPage = protectPage;
 window.showToast = showToast;
-
-// Role functions
 window.getCurrentUserRole = getCurrentUserRole;
 window.hasPermission = hasPermission;
 window.canEditBooks = canEditBooks;
