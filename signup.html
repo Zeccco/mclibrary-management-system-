@@ -34,7 +34,7 @@
                         <label for="email">Email Address</label>
                         <div class="input-icon">
                             <i class="fas fa-envelope"></i>
-                            <input type="email" id="email" class="form-control" placeholder="librarian@library.com" required>
+                            <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
                         </div>
                     </div>
                     
@@ -83,6 +83,14 @@
             const confirmPassword = document.getElementById('confirmPassword').value;
             signupUser(name, email, password, confirmPassword);
         }
+        
+        // Clear fields on page load
+        window.addEventListener('load', function() {
+            document.getElementById('fullName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('confirmPassword').value = '';
+        });
         
         // Allow Enter key to submit
         const inputs = ['fullName', 'email', 'password', 'confirmPassword'];
