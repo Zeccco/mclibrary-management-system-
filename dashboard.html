@@ -1469,6 +1469,136 @@ async function checkBorrowingLimit(memberId) {
             try { await db.collection('books').doc(bookId).delete(); loadCatalog(); showToast('Book deleted', 'success'); } 
             catch (error) { alert('Error: ' + error.message); }
         }
+        // ========== EDIT BOOK FUNCTION ==========
+async function editBook(bookId) {
+    try {
+        // Fetch current book data
+        const bookDoc = await db.collection('books').doc(bookId).get();
+        const book = bookDoc.data();
+        
+        if (!book) {
+            alert('Book not found');
+            return;
+        }
+        
+        // Create edit modal
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Book</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form onsubmit="updateBook(event, '${bookId}')">
+                <div class="form-group">
+                    <label>Accession Number *</label>
+                    <input type="text" id="editAccessionNo" value="${book.accessionNo || ''}" required placeholder="e.g., A001">
+                </div>
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="editTitle" value="${book.title || ''}" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Author *</label>
+                        <input type="text" id="editAuthor" value="${book.author || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ISBN</label>
+                        <input type="text" id="editIsbn" value="${book.isbn || ''}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <input type="text" id="editSubject" value="${book.subject || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>DDC Number *</label>
+                        <select id="editDdcNumber" required>
+                            <option value="">Select DDC Class</option>
+                            ${ddcMainClasses.map(d => `
+                                <option value="${d.number}" ${book.ddcNumber === d.number ? 'selected' : ''}>
+                                    ${d.number} - ${d.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year</label>
+                        <input type="number" id="editYear" value="${book.year || ''}" min="1900" max="2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Copies</label>
+                        <input type="number" id="editTotalCopies" value="${book.totalCopies || 1}" min="1" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Available Copies</label>
+                    <input type="number" id="editAvailableCopies" value="${book.availableCopies || book.totalCopies || 1}" min="0" required>
+                    <small style="color: #6c757d;">Note: Available copies cannot exceed total copies</small>
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-success" style="width: 48%;">
+                        <i class="fas fa-save"></i> Update Book
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal()" style="width: 48%;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        `;
+        
+        modal.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading book for edit:', error);
+        alert('Error loading book data');
+    }
+}
+
+// ========== UPDATE BOOK FUNCTION ==========
+async function updateBook(event, bookId) {
+    event.preventDefault();
+    
+    const totalCopies = parseInt(document.getElementById('editTotalCopies').value);
+    const availableCopies = parseInt(document.getElementById('editAvailableCopies').value);
+    
+    // Validate available copies
+    if (availableCopies > totalCopies) {
+        alert('Available copies cannot exceed total copies');
+        return;
+    }
+    
+    const status = availableCopies > 0 ? 'Available' : 'Borrowed';
+    
+    const updatedBook = {
+        accessionNo: document.getElementById('editAccessionNo').value,
+        title: document.getElementById('editTitle').value,
+        author: document.getElementById('editAuthor').value,
+        isbn: document.getElementById('editIsbn').value || '',
+        subject: document.getElementById('editSubject').value || '',
+        ddcNumber: document.getElementById('editDdcNumber').value,
+        year: parseInt(document.getElementById('editYear').value) || null,
+        totalCopies: totalCopies,
+        availableCopies: availableCopies,
+        status: status,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+        await db.collection('books').doc(bookId).update(updatedBook);
+        closeModal();
+        loadCatalog();
+        showToast('Book updated successfully!', 'success');
+    } catch (error) {
+        console.error('Error updating book:', error);
+        alert('Error updating book: ' + error.message);
+    }
+}
 
         async function deleteMember(memberId) {
             if (!confirm('Delete this member?')) return;
