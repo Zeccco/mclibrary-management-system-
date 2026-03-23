@@ -1734,5 +1734,184 @@ async function updateBook(event, bookId) {
             });
         })();
     </script>
+    // ========== ROLE-BASED UI CONTROL ==========
+let currentUserRole = null;
+
+// Get current user role
+async function loadUserRoleForDashboard() {
+    const user = getCurrentUser();
+    if (user) {
+        // Wait a bit for auth.js to load role
+        await new Promise(resolve => setTimeout(resolve, 500));
+        currentUserRole = getCurrentUserRole();
+        
+        // Update UI based on role
+        updateDashboardUIForRole();
+        
+        // Add admin link if admin
+        if (isAdmin()) {
+            addAdminLinkToSidebar();
+        }
+        
+        // Display user role in top bar
+        displayUserRole();
+    }
+}
+
+// Update dashboard UI based on role
+function updateDashboardUIForRole() {
+    // Find all action buttons
+    const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
+    const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
+    const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
+    
+    if (isStaff()) {
+        // Staff: Hide all action buttons
+        if (addBookBtn) addBookBtn.style.display = 'none';
+        if (addMemberBtn) addMemberBtn.style.display = 'none';
+        if (checkoutBtn) checkoutBtn.style.display = 'none';
+        
+        // Hide delete buttons in catalog
+        hideDeleteButtons();
+        
+        // Disable return buttons in circulation
+        disableReturnButtons();
+        
+        showToast('You are in read-only mode (Staff)', 'info');
+    } else if (isLibrarian()) {
+        // Librarian: Show action buttons, hide delete buttons
+        if (addBookBtn) addBookBtn.style.display = 'inline-flex';
+        if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
+        if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
+        
+        // Hide delete buttons
+        hideDeleteButtons();
+        
+        showToast('Librarian mode - You can manage books, members, and circulation', 'info');
+    } else if (isAdmin()) {
+        // Admin: Show everything
+        showToast('Admin mode - Full access', 'success');
+    }
+}
+
+// Hide all delete buttons in catalog and members
+function hideDeleteButtons() {
+    const deleteButtons = document.querySelectorAll('.btn-danger');
+    deleteButtons.forEach(btn => {
+        if (btn.textContent.includes('Delete') || btn.onclick?.toString().includes('delete')) {
+            btn.style.display = 'none';
+        }
+    });
+}
+
+// Disable return buttons for staff
+function disableReturnButtons() {
+    const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
+    returnButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = 'Staff cannot process returns';
+    });
+}
+
+// Add admin link to sidebar
+function addAdminLinkToSidebar() {
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav && !document.querySelector('.admin-nav-link')) {
+        const adminLink = document.createElement('div');
+        adminLink.className = 'nav-item admin-nav-link';
+        adminLink.setAttribute('data-view', 'admin');
+        adminLink.innerHTML = `
+            <i class="fas fa-user-shield"></i>
+            <span>User Management</span>
+        `;
+        adminLink.onclick = () => {
+            window.location.href = 'admin.html';
+        };
+        sidebarNav.appendChild(adminLink);
+    }
+}
+
+// Display user role in top bar
+function displayUserRole() {
+    const userInfo = document.querySelector('.user-info');
+    if (userInfo && !document.querySelector('.user-role-badge')) {
+        const roleBadge = document.createElement('span');
+        roleBadge.className = 'user-role-badge';
+        let roleText = '';
+        let roleColor = '';
+        
+        if (isAdmin()) {
+            roleText = 'Admin';
+            roleColor = '#e74c3c';
+        } else if (isLibrarian()) {
+            roleText = 'Librarian';
+            roleColor = '#27ae60';
+        } else {
+            roleText = 'Staff';
+            roleColor = '#3498db';
+        }
+        
+        roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
+        userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
+    }
+}
+
+// Override delete functions to check permissions
+const originalDeleteBook = window.deleteBook;
+window.deleteBook = async function(bookId) {
+    if (!canDeleteData()) {
+        showToast('Permission denied: Only admins can delete books', 'error');
+        return;
+    }
+    if (confirm('Delete this book?')) {
+        await originalDeleteBook(bookId);
+    }
+};
+
+const originalDeleteMember = window.deleteMember;
+window.deleteMember = async function(memberId) {
+    if (!canDeleteData()) {
+        showToast('Permission denied: Only admins can delete members', 'error');
+        return;
+    }
+    if (confirm('Delete this member?')) {
+        await originalDeleteMember(memberId);
+    }
+};
+
+// Override showAddBookForm for role check
+const originalShowAddBookForm = window.showAddBookForm;
+window.showAddBookForm = function() {
+    if (!canEditBooks()) {
+        showToast('Permission denied: Only admins and librarians can add books', 'error');
+        return;
+    }
+    originalShowAddBookForm();
+};
+
+// Override showAddMemberForm for role check
+const originalShowAddMemberForm = window.showAddMemberForm;
+window.showAddMemberForm = function() {
+    if (!canEditMembers()) {
+        showToast('Permission denied: Only admins and librarians can add members', 'error');
+        return;
+    }
+    originalShowAddMemberForm();
+};
+
+// Override showCheckoutForm for role check
+const originalShowCheckoutForm = window.showCheckoutForm;
+window.showCheckoutForm = function() {
+    if (!canManageCirculation()) {
+        showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
+        return;
+    }
+    originalShowCheckoutForm();
+};
+
+// Call on page load
+setTimeout(loadUserRoleForDashboard, 1000);
 </body>
 </html>
