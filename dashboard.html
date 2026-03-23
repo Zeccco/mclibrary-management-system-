@@ -74,7 +74,7 @@
         .action-btn { padding: 6px 12px; font-size: 0.8rem; margin: 0 3px; }
         .form-container { background: var(--white); border-radius: var(--radius-lg); padding: 25px; margin-bottom: 25px; box-shadow: var(--shadow-sm); width: 100%; overflow-x: auto; }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .section-header h2 { font-size: 1.3rem; color: var(--dark); }
+        .section-header h2 { font-size: 1.3rem; color: var(--dark); margin: 0; }
         .section-header h2 i { color: var(--primary); margin-right: 8px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--dark); }
@@ -92,7 +92,7 @@
         .modal-content { background: var(--white); width: 90%; max-width: 550px; margin: 50px auto; padding: 30px; border-radius: var(--radius-lg); max-height: 85vh; overflow-y: auto; animation: slideDown 0.3s ease; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--gray); }
-        .modal-header h3 { color: var(--dark); font-size: 1.3rem; }
+        .modal-header h3 { color: var(--dark); font-size: 1.3rem; margin: 0; }
         .modal-header h3 i { color: var(--primary); margin-right: 10px; }
         .close { font-size: 1.8rem; cursor: pointer; color: var(--dark-gray); transition: color 0.3s; }
         .close:hover { color: var(--danger); }
@@ -261,7 +261,7 @@
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // ========== DASHBOARD with Recent Transactions ==========
+        // ========== DASHBOARD ==========
         async function loadDashboard() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading dashboard...</p>';
@@ -272,22 +272,13 @@
                 let totalBooks = 0, totalAvailable = 0;
                 booksSnapshot.forEach(doc => { const b = doc.data(); totalBooks += b.totalCopies || 0; totalAvailable += b.availableCopies || 0; });
                 
-                // Get recent transactions
                 let recentTransactionsHtml = '';
                 try {
                     const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
                     recent.forEach(doc => {
                         const t = doc.data();
                         const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                        recentTransactionsHtml += `
-                            <tr>
-                                <td>${t.transactionId || 'N/A'}</td>
-                                <td>${t.accessionNo || 'N/A'}</td>
-                                <td>${t.memberId || 'N/A'}</td>
-                                <td>${issueDate}</td>
-                                <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
-                            </tr>
-                        `;
+                        recentTransactionsHtml += `<tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
                     });
                 } catch(e) { console.log('No transactions'); }
                 
@@ -302,9 +293,8 @@
                     <div class="form-container">
                         <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
                         <div class="table-container">
-                            <table>
-                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
-                                <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
+                            <table><thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
+                            <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
                             </table>
                         </div>
                     </div>
@@ -317,7 +307,7 @@
             } catch (error) { contentArea.innerHTML = '<p>Error loading dashboard</p>'; }
         }
 
-        // ========== CATALOG with Search ==========
+        // ========== CATALOG ==========
         async function loadCatalog() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading catalog...</p>';
@@ -376,7 +366,7 @@
             const rows = document.querySelectorAll('#catalogTableBody tr');
             rows.forEach(row => {
                 const ddcCell = row.cells[5]?.textContent.trim();
-                if (ddcCell === ddc || ddc === '') {
+                if (ddcCell === ddc) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -385,7 +375,7 @@
             document.getElementById('catalogSearch').value = '';
         }
 
-        // ========== MEMBERS with Search ==========
+        // ========== MEMBERS ==========
         async function loadMembers() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading members...</p>';
@@ -449,15 +439,15 @@
                         <td>${t.accessionNo}</td>
                         <td>${t.memberId}</td>
                         <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}</td>
-                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}  </td>
-                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  </td>
-                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  </td>
-                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  </td>
-                     </tr>`;
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}</td>
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  on
+                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  on
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  on
+                      </tr>`;
                 });
                 html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
+            } catch (error) { contentArea.innerHTML = '<p>Error loading circulation</p>'; }
         }
 
         function searchCirc() {
@@ -475,39 +465,98 @@
             });
         }
 
-        // ========== FINES ==========
+        // ========== FINES - Fixed Display ==========
         async function loadFines() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading fines...</p>';
             try {
                 const fines = await db.collection('fines').get();
-                let total = 0, html = `<div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Fines</h3><div class="stat-number">K0</div></div></div><div class="form-container"><div class="section-header"><h2><i class="fas fa-exclamation-triangle"></i> Fines</h2></div><div class="table-container">   <thead> <tr><th>Transaction</th><th>Due</th><th>Return</th><th>Days Late</th><th>Fine</th><th>Status</th><th>Action</th></tr> </thead><tbody>`;
-                fines.forEach(doc => {
-                    const f = doc.data();
-                    total += f.totalFine || 0;
-                    html += `<tr><td>${f.transactionId}</td><td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td><td>${f.daysLate || 0}</td><td>K${f.totalFine || 0}</td><td><span class="badge badge-${f.status==='Paid'?'available':'warning'}">${f.status||'Unpaid'}</span></td><td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : 'Paid'}</td></tr>`;
-                });
-                html += `</tbody> </div></div>`;
-                html = html.replace('K0', `K${total}`);
+                let totalFines = 0;
+                let finesHtml = '';
+                
+                if (fines.empty) {
+                    finesHtml = '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>';
+                } else {
+                    fines.forEach(doc => {
+                        const f = doc.data();
+                        totalFines += f.totalFine || 0;
+                        const dueDateStr = f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-';
+                        const returnDateStr = f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-';
+                        const statusClass = f.status === 'Paid' ? 'available' : 'warning';
+                        const statusText = f.status || 'Unpaid';
+                        
+                        finesHtml += `
+                            <tr>
+                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
+                                <td>${dueDateStr}</td>
+                                <td>${returnDateStr}</td>
+                                <td style="text-align:center">${f.daysLate || 0}</td>
+                                <td>K${f.finePerDay || 500}</td>
+                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
+                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                const html = `
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <h3>Total Outstanding Fines</h3>
+                            <div class="stat-number" style="color:#e74c3c">K${totalFines}</div>
+                        </div>
+                    </div>
+                    <div class="form-container">
+                        <div class="section-header">
+                            <h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Due Date</th>
+                                        <th>Return Date</th>
+                                        <th>Days Late</th>
+                                        <th>Fine per Day</th>
+                                        <th>Total Fine</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${finesHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error</p>'; }
+            } catch (error) {
+                console.error('Error loading fines:', error);
+                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading fines</div>';
+            }
         }
 
+        // ========== DDC CLASSES ==========
         function loadDDCClasses() {
-            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Classes</h2></div><div class="table-container">   <thead> <tr><th>Class</th><th>Name</th><th>Description</th></tr> </thead><tbody>${ddcMainClasses.map(d => `<tr><td><strong>${d.number}</strong></td><td>${d.name}</td><td>Books about ${d.name.toLowerCase()}</td></tr>`).join('')}</tbody> </div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><p>The Dewey Decimal Classification organizes knowledge into ten main classes.</p></div></div>`;
+            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Classes</h2></div><div class="table-container">   <thead>  <tr><th>Class</th><th>Name</th><th>Description</th></tr> </thead><tbody>${ddcMainClasses.map(d => `<tr><td><strong>${d.number}</strong></td><td>${d.name}</td><td>Books about ${d.name.toLowerCase()}</td></tr>`).join('')}</tbody> </div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><p>The Dewey Decimal Classification organizes knowledge into ten main classes.</p></div></div>`;
             document.getElementById('contentArea').innerHTML = html;
         }
 
+        // ========== FORM FUNCTIONS ==========
         function showAddBookForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
-                <div class="modal-header"><h3>Add Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession No</label><input type="text" id="accNo" required></div>
-                <div class="form-group"><label>Title</label><input type="text" id="title" required></div>
-                <div class="form-row"><div class="form-group"><label>Author</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
-                <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC</label><select id="ddc">${ddcMainClasses.map(d=>`<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
-                <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year"></div><div class="form-group"><label>Copies</label><input type="number" id="copies" value="1" min="1"></div></div>
-                <button type="submit" class="btn btn-success">Save</button></form>`;
+                <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add New Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="accNo" required placeholder="e.g., A001"></div>
+                <div class="form-group"><label>Title *</label><input type="text" id="title" required></div>
+                <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
+                <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC Number *</label><select id="ddc" required>${ddcMainClasses.map(d=>`<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year" min="1900" max="2026"></div><div class="form-group"><label>Total Copies *</label><input type="number" id="copies" value="1" min="1" required></div></div>
+                <button type="submit" class="btn btn-success" style="width:100%"><i class="fas fa-save"></i> Save Book</button></form>`;
             modal.style.display = 'block';
         }
 
@@ -524,22 +573,22 @@
                 totalCopies: parseInt(document.getElementById('copies').value),
                 availableCopies: parseInt(document.getElementById('copies').value),
                 status: 'Available',
-                createdAt: new Date()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            try { await db.collection('books').add(data); closeModal(); loadCatalog(); showToast('Book added!', 'success'); } 
+            try { await db.collection('books').add(data); closeModal(); loadCatalog(); showToast('Book added successfully!', 'success'); } 
             catch (error) { alert('Error: ' + error.message); }
         }
 
         function showAddMemberForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
-                <div class="modal-header"><h3>Add Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID</label><input type="text" id="memId" required></div>
-                <div class="form-group"><label>Full Name</label><input type="text" id="memName" required></div>
-                <div class="form-row"><div class="form-group"><label>Category</label><select id="memCat"><option>Student</option><option>Teaching Staff</option><option>Non-Teaching Staff</option><option>External</option></select></div>
-                <div class="form-group"><label>Phone</label><input type="tel" id="memPhone" required></div></div>
-                <div class="form-group"><label>Status</label><select id="memStatus"><option>Active</option><option>Inactive</option></select></div>
-                <button type="submit" class="btn btn-success">Save</button></form>`;
+                <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add New Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID *</label><input type="text" id="memId" required placeholder="e.g., M001"></div>
+                <div class="form-group"><label>Full Name *</label><input type="text" id="memName" required></div>
+                <div class="form-row"><div class="form-group"><label>Category *</label><select id="memCat" required><option>Student</option><option>Teaching Staff</option><option>Non-Teaching Staff</option><option>External Member</option></select></div>
+                <div class="form-group"><label>Phone *</label><input type="tel" id="memPhone" required></div></div>
+                <div class="form-group"><label>Status *</label><select id="memStatus" required><option>Active</option><option>Inactive</option></select></div>
+                <button type="submit" class="btn btn-success" style="width:100%"><i class="fas fa-save"></i> Save Member</button></form>`;
             modal.style.display = 'block';
         }
 
@@ -551,21 +600,21 @@
                 category: document.getElementById('memCat').value,
                 phone: document.getElementById('memPhone').value,
                 status: document.getElementById('memStatus').value,
-                createdAt: new Date()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            try { await db.collection('members').add(data); closeModal(); loadMembers(); showToast('Member added!', 'success'); } 
+            try { await db.collection('members').add(data); closeModal(); loadMembers(); showToast('Member added successfully!', 'success'); } 
             catch (error) { alert('Error: ' + error.message); }
         }
 
         function showCheckoutForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
-                <div class="modal-header"><h3>Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession No</label><input type="text" id="checkAcc" required></div>
-                <div class="form-group"><label>Member ID</label><input type="text" id="checkMem" required></div>
-                <div class="form-row"><div class="form-group"><label>Issue Date</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
-                <div class="form-group"><label>Loan Period</label><select id="loanDays"><option value="7">7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
-                <button type="submit" class="btn btn-success">Checkout</button></form>`;
+                <div class="modal-header"><h3><i class="fas fa-hand-holding"></i> New Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="checkAcc" required placeholder="e.g., A001"></div>
+                <div class="form-group"><label>Member ID *</label><input type="text" id="checkMem" required placeholder="e.g., M001"></div>
+                <div class="form-row"><div class="form-group"><label>Issue Date *</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
+                <div class="form-group"><label>Loan Period *</label><select id="loanDays"><option value="7">7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
+                <button type="submit" class="btn btn-success" style="width:100%"><i class="fas fa-check"></i> Process Checkout</button></form>`;
             modal.style.display = 'block';
         }
 
@@ -584,7 +633,7 @@
                 const member = await db.collection('members').where('memberId', '==', mem).where('status', '==', 'Active').get();
                 if (member.empty) { alert('Member not active'); return; }
                 const tid = 'T' + Date.now().toString().slice(-6);
-                await db.collection('transactions').add({ transactionId: tid, accessionNo: acc, memberId: mem, issueDate: issue, dueDate: due, returnDate: null, status: 'Borrowed', createdAt: new Date() });
+                await db.collection('transactions').add({ transactionId: tid, accessionNo: acc, memberId: mem, issueDate: issue, dueDate: due, returnDate: null, status: 'Borrowed', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 await bookDoc.ref.update({ availableCopies: bookData.availableCopies - 1, status: bookData.availableCopies - 1 > 0 ? 'Available' : 'Borrowed' });
                 closeModal(); showToast(`Checkout successful! ID: ${tid}`, 'success'); loadCirculation(); loadCatalog(); loadDashboard();
             } catch (error) { alert('Error: ' + error.message); }
@@ -605,7 +654,7 @@
                 if (returnDate > t.dueDate.toDate()) {
                     const days = Math.ceil((returnDate - t.dueDate.toDate()) / (86400000));
                     const fine = days * 500;
-                    await db.collection('fines').add({ transactionId: t.transactionId, dueDate: t.dueDate, returnDate, daysLate: days, finePerDay: 500, totalFine: fine, status: 'Unpaid', createdAt: new Date() });
+                    await db.collection('fines').add({ transactionId: t.transactionId, dueDate: t.dueDate, returnDate, daysLate: days, finePerDay: 500, totalFine: fine, status: 'Unpaid', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                     showToast(`Fine: K${fine} (${days} days late)`, 'warning');
                 } else { showToast('Book returned!', 'success'); }
                 loadCirculation(); loadCatalog(); loadDashboard();
@@ -613,19 +662,19 @@
         }
 
         async function payFine(fid) {
-            if (!confirm('Mark as paid?')) return;
-            try { await db.collection('fines').doc(fid).update({ status: 'Paid', paidAt: new Date() }); loadFines(); showToast('Fine paid', 'success'); } 
-            catch (error) { alert('Error'); }
+            if (!confirm('Mark this fine as paid?')) return;
+            try { await db.collection('fines').doc(fid).update({ status: 'Paid', paidAt: firebase.firestore.FieldValue.serverTimestamp() }); loadFines(); showToast('Fine paid successfully!', 'success'); } 
+            catch (error) { alert('Error: ' + error.message); }
         }
 
         async function deleteBook(id) {
-            if (!canDeleteData()) { showToast('Only admins can delete', 'error'); return; }
-            if (confirm('Delete?')) { await db.collection('books').doc(id).delete(); loadCatalog(); showToast('Deleted', 'success'); }
+            if (!canDeleteData()) { showToast('Only admins can delete books', 'error'); return; }
+            if (confirm('Delete this book?')) { await db.collection('books').doc(id).delete(); loadCatalog(); showToast('Book deleted', 'success'); }
         }
 
         async function deleteMember(id) {
-            if (!canDeleteData()) { showToast('Only admins can delete', 'error'); return; }
-            if (confirm('Delete?')) { await db.collection('members').doc(id).delete(); loadMembers(); showToast('Deleted', 'success'); }
+            if (!canDeleteData()) { showToast('Only admins can delete members', 'error'); return; }
+            if (confirm('Delete this member?')) { await db.collection('members').doc(id).delete(); loadMembers(); showToast('Member deleted', 'success'); }
         }
 
         async function editBook(id) {
@@ -633,15 +682,16 @@
             const b = book.data();
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
-                <div class="modal-header"><h3>Edit Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                <div class="modal-header"><h3><i class="fas fa-edit"></i> Edit Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
                 <form onsubmit="updateBook(event, '${id}')">
-                    <div class="form-group"><label>Accession</label><input type="text" id="eAcc" value="${b.accessionNo}" required></div>
+                    <div class="form-group"><label>Accession Number</label><input type="text" id="eAcc" value="${b.accessionNo}" required></div>
                     <div class="form-group"><label>Title</label><input type="text" id="eTitle" value="${b.title}" required></div>
                     <div class="form-row"><div class="form-group"><label>Author</label><input type="text" id="eAuthor" value="${b.author}" required></div><div class="form-group"><label>ISBN</label><input type="text" id="eIsbn" value="${b.isbn || ''}"></div></div>
-                    <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="eSubject" value="${b.subject || ''}"></div><div class="form-group"><label>DDC</label><select id="eDdc">${ddcMainClasses.map(d=>`<option value="${d.number}" ${b.ddcNumber===d.number?'selected':''}>${d.number} - ${d.name}</option>`).join('')}</select></div></div>
-                    <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="eYear" value="${b.year || ''}"></div><div class="form-group"><label>Total Copies</label><input type="number" id="eTotal" value="${b.totalCopies}" min="1"></div></div>
-                    <div class="form-group"><label>Available Copies</label><input type="number" id="eAvail" value="${b.availableCopies}" min="0"></div>
-                    <button type="submit" class="btn btn-success">Update</button></form>`;
+                    <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="eSubject" value="${b.subject || ''}"></div><div class="form-group"><label>DDC Number</label><select id="eDdc">${ddcMainClasses.map(d=>`<option value="${d.number}" ${b.ddcNumber===d.number?'selected':''}>${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                    <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="eYear" value="${b.year || ''}" min="1900" max="2026"></div><div class="form-group"><label>Total Copies</label><input type="number" id="eTotal" value="${b.totalCopies}" min="1" required></div></div>
+                    <div class="form-group"><label>Available Copies</label><input type="number" id="eAvail" value="${b.availableCopies}" min="0" required></div>
+                    <div class="form-row"><button type="submit" class="btn btn-success" style="width:48%"><i class="fas fa-save"></i> Update</button><button type="button" class="btn btn-danger" onclick="closeModal()" style="width:48%">Cancel</button></div>
+                </form>`;
             modal.style.display = 'block';
         }
 
@@ -649,7 +699,7 @@
             e.preventDefault();
             const total = parseInt(document.getElementById('eTotal').value);
             const avail = parseInt(document.getElementById('eAvail').value);
-            if (avail > total) { alert('Available cannot exceed total'); return; }
+            if (avail > total) { alert('Available copies cannot exceed total copies'); return; }
             await db.collection('books').doc(id).update({
                 accessionNo: document.getElementById('eAcc').value,
                 title: document.getElementById('eTitle').value,
@@ -661,11 +711,12 @@
                 totalCopies: total,
                 availableCopies: avail,
                 status: avail > 0 ? 'Available' : 'Borrowed',
-                updatedAt: new Date()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            closeModal(); loadCatalog(); showToast('Book updated!', 'success');
+            closeModal(); loadCatalog(); showToast('Book updated successfully!', 'success');
         }
 
+        // ========== NAVIGATION ==========
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -682,6 +733,7 @@
 
         window.onclick = e => { if (e.target === document.getElementById('modal')) closeModal(); };
 
+        // ========== MOBILE MENU ==========
         (function() {
             const toggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
