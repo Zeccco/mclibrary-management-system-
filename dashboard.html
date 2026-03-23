@@ -1344,6 +1344,50 @@ async function loadCatalog() {
         alert('Error: ' + error.message); 
     }
 }
+        // ========== MEMBER BORROWING LIMITS ==========
+async function checkBorrowingLimit(memberId) {
+    try {
+        // Get member details
+        const memberSnapshot = await db.collection('members').where('memberId', '==', memberId).get();
+        if (memberSnapshot.empty) return { allowed: false, message: 'Member not found' };
+        
+        const member = memberSnapshot.docs[0].data();
+        const memberCategory = member.category;
+        
+        // Define borrowing limits by category
+        const limits = {
+            'Student': 3,
+            'Teaching Staff': 5,
+            'Non-Teaching Staff': 4,
+            'External Member': 2
+        };
+        
+        const maxBooks = limits[memberCategory] || 3;
+        
+        // Count current borrowed books
+        const borrowedSnapshot = await db.collection('transactions')
+            .where('memberId', '==', memberId)
+            .where('status', '==', 'Borrowed')
+            .get();
+        
+        const currentCount = borrowedSnapshot.size;
+        const remaining = maxBooks - currentCount;
+        
+        return {
+            allowed: currentCount < maxBooks,
+            current: currentCount,
+            max: maxBooks,
+            remaining: remaining,
+            category: memberCategory,
+            message: currentCount >= maxBooks ? 
+                `${memberCategory} can borrow maximum ${maxBooks} books. Currently has ${currentCount} borrowed.` : 
+                `${memberCategory} can borrow ${remaining} more book(s).`
+        };
+    } catch (error) {
+        console.error('Error checking limit:', error);
+        return { allowed: true, message: 'Limit check failed' };
+    }
+}
        async function returnBook(transactionId, accessionNo) {
     if (!confirm('Confirm book return?')) return;
     try {
