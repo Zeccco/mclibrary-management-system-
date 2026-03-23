@@ -960,9 +960,14 @@ async function loadCatalog() {
                         </td>
                         <td><span class="badge badge-${statusClass}">${status}</span></td>
                         <td>
-                            <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
+                           <td>
+    <button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">
+        <i class="fas fa-edit"></i> Edit
+    </button>
+    <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">
+        <i class="fas fa-trash"></i> Delete
+    </button>
+</td> </button>
                         </td>
                     </tr>
                 `;
