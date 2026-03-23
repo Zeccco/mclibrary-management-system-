@@ -1,6 +1,6 @@
 // ====================
 // FIREBASE AUTHENTICATION MODULE
-// Professional Library System
+// Professional Library System with Role Management
 // ====================
 
 // Firebase Configuration
@@ -22,15 +22,71 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ====================
+// ROLE DEFINITIONS
+// ====================
+const ROLES = {
+    ADMIN: 'admin',
+    LIBRARIAN: 'librarian',
+    STAFF: 'staff'
+};
+
+// Permission definitions
+const PERMISSIONS = {
+    [ROLES.ADMIN]: {
+        manageUsers: true,
+        manageBooks: true,
+        manageMembers: true,
+        manageCirculation: true,
+        manageFines: true,
+        viewReports: true,
+        deleteData: true,
+        editBooks: true,
+        editMembers: true
+    },
+    [ROLES.LIBRARIAN]: {
+        manageUsers: false,
+        manageBooks: true,
+        manageMembers: true,
+        manageCirculation: true,
+        manageFines: true,
+        viewReports: true,
+        deleteData: false,
+        editBooks: true,
+        editMembers: true
+    },
+    [ROLES.STAFF]: {
+        manageUsers: false,
+        manageBooks: false,
+        manageMembers: false,
+        manageCirculation: false,
+        manageFines: false,
+        viewReports: true,
+        deleteData: false,
+        editBooks: false,
+        editMembers: false
+    }
+};
+
+// Global variable to store current user role
+let currentUserRole = null;
+let currentUserData = null;
+
+// ====================
 // AUTHENTICATION STATE MANAGEMENT
 // ====================
-
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
         const currentPage = window.location.pathname.split('/').pop();
-        if (currentPage === 'index.html' || currentPage === 'signup.html' || currentPage === 'forgot-password.html' || currentPage === '') {
+        
+        // Fetch user role from Firestore
+        await loadCurrentUserRole(user.uid);
+        
+        // Redirect logic
+        if (currentPage === 'index.html' || currentPage === 'signup.html' || 
+            currentPage === 'forgot-password.html' || currentPage === '') {
             window.location.href = 'dashboard.html';
         }
+        
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('userId', user.uid);
     } else {
@@ -41,8 +97,148 @@ auth.onAuthStateChanged((user) => {
         }
         localStorage.removeItem('userEmail');
         localStorage.removeItem('userId');
+        currentUserRole = null;
+        currentUserData = null;
     }
 });
+
+// ====================
+// ROLE MANAGEMENT FUNCTIONS
+// ====================
+async function loadCurrentUserRole(userId) {
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            currentUserData = userDoc.data();
+            currentUserRole = currentUserData.role || ROLES.STAFF;
+        } else {
+            // If no role set, default to STAFF
+            currentUserRole = ROLES.STAFF;
+        }
+        return currentUserRole;
+    } catch (error) {
+        console.error('Error loading user role:', error);
+        currentUserRole = ROLES.STAFF;
+        return ROLES.STAFF;
+    }
+}
+
+function getCurrentUserRole() {
+    return currentUserRole || ROLES.STAFF;
+}
+
+function getCurrentUserData() {
+    return currentUserData;
+}
+
+async function hasPermission(permission) {
+    const role = getCurrentUserRole();
+    return PERMISSIONS[role]?.[permission] || false;
+}
+
+function canEditBooks() {
+    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+}
+
+function canEditMembers() {
+    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+}
+
+function canManageCirculation() {
+    return getCurrentUserRole() === ROLES.ADMIN || getCurrentUserRole() === ROLES.LIBRARIAN;
+}
+
+function canDeleteData() {
+    return getCurrentUserRole() === ROLES.ADMIN;
+}
+
+function isAdmin() {
+    return getCurrentUserRole() === ROLES.ADMIN;
+}
+
+function isLibrarian() {
+    return getCurrentUserRole() === ROLES.LIBRARIAN;
+}
+
+function isStaff() {
+    return getCurrentUserRole() === ROLES.STAFF;
+}
+
+// ====================
+// USER MANAGEMENT FUNCTIONS (Admin only)
+// ====================
+async function getAllUsers() {
+    if (!isAdmin()) {
+        throw new Error('Permission denied: Only admins can view users');
+    }
+    
+    const usersSnapshot = await db.collection('users').get();
+    return usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+}
+
+async function updateUserRole(userId, newRole) {
+    if (!isAdmin()) {
+        throw new Error('Permission denied: Only admins can update roles');
+    }
+    
+    if (!Object.values(ROLES).includes(newRole)) {
+        throw new Error('Invalid role');
+    }
+    
+    await db.collection('users').doc(userId).update({
+        role: newRole,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: auth.currentUser?.uid
+    });
+    
+    return true;
+}
+
+async function createStaffAccount(email, password, name, role = ROLES.STAFF) {
+    if (!isAdmin()) {
+        throw new Error('Permission denied: Only admins can create staff accounts');
+    }
+    
+    try {
+        // Create Firebase Auth user
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        
+        // Create user profile with role
+        await db.collection('users').doc(userCredential.user.uid).set({
+            name: name,
+            email: email,
+            role: role,
+            status: 'active',
+            createdBy: auth.currentUser?.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLogin: null
+        });
+        
+        showToast(`${name} (${role}) account created successfully!`, 'success');
+        return true;
+    } catch (error) {
+        console.error('Error creating staff account:', error);
+        showToast('Error creating account: ' + error.message, 'error');
+        return false;
+    }
+}
+
+async function deleteUserAccount(userId) {
+    if (!isAdmin()) {
+        throw new Error('Permission denied: Only admins can delete users');
+    }
+    
+    // Cannot delete your own account
+    if (userId === auth.currentUser?.uid) {
+        throw new Error('Cannot delete your own account');
+    }
+    
+    await db.collection('users').doc(userId).delete();
+    return true;
+}
 
 // ====================
 // LOGIN FUNCTION
@@ -66,10 +262,31 @@ async function loginUser(email, password) {
     try {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         
-        // Update last login
-        await db.collection('users').doc(userCredential.user.uid).set({
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        // Check if user exists in Firestore
+        const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+        
+        if (!userDoc.exists) {
+            // First user becomes admin, others become staff
+            const usersSnapshot = await db.collection('users').limit(1).get();
+            const isFirstUser = usersSnapshot.empty;
+            
+            await db.collection('users').doc(userCredential.user.uid).set({
+                name: email.split('@')[0],
+                email: email,
+                role: isFirstUser ? ROLES.ADMIN : ROLES.STAFF,
+                status: 'active',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            // Update last login
+            await db.collection('users').doc(userCredential.user.uid).update({
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        // Load role
+        await loadCurrentUserRole(userCredential.user.uid);
         
         showToast('Login successful! Redirecting...', 'success');
         
@@ -142,13 +359,17 @@ async function signupUser(name, email, password, confirmPassword) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
+        // Check if this is the first user (becomes admin)
+        const usersSnapshot = await db.collection('users').limit(1).get();
+        const isFirstUser = usersSnapshot.empty;
+        
         await db.collection('users').doc(userCredential.user.uid).set({
             name: name,
             email: email,
-            role: 'user',
+            role: isFirstUser ? ROLES.ADMIN : ROLES.STAFF,
+            status: 'active',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            status: 'active'
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         showToast('Account created successfully! Redirecting...', 'success');
@@ -249,7 +470,6 @@ async function logoutUser() {
 // UTILITY FUNCTIONS
 // ====================
 function showToast(message, type = 'info') {
-    // Remove any existing toasts
     const existingToasts = document.querySelectorAll('.toast');
     existingToasts.forEach(toast => toast.remove());
     
@@ -293,3 +513,19 @@ window.getCurrentUser = getCurrentUser;
 window.getUserProfile = getUserProfile;
 window.protectPage = protectPage;
 window.showToast = showToast;
+
+// Role functions
+window.getCurrentUserRole = getCurrentUserRole;
+window.hasPermission = hasPermission;
+window.canEditBooks = canEditBooks;
+window.canEditMembers = canEditMembers;
+window.canManageCirculation = canManageCirculation;
+window.canDeleteData = canDeleteData;
+window.isAdmin = isAdmin;
+window.isLibrarian = isLibrarian;
+window.isStaff = isStaff;
+window.getAllUsers = getAllUsers;
+window.updateUserRole = updateUserRole;
+window.createStaffAccount = createStaffAccount;
+window.deleteUserAccount = deleteUserAccount;
+window.ROLES = ROLES;
