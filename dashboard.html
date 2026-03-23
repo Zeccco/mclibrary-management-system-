@@ -38,6 +38,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--light-gray);
             min-height: 100vh;
+            overflow-x: auto;
         }
 
         /* App Layout */
@@ -54,7 +55,7 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease;
             z-index: 100;
         }
 
@@ -122,6 +123,7 @@
             margin-left: 280px;
             background: var(--light-gray);
             min-height: 100vh;
+            overflow-x: auto;
         }
 
         .top-bar {
@@ -177,6 +179,7 @@
 
         .content-area {
             padding: 25px;
+            overflow-x: auto;
         }
 
         /* Stats Cards */
@@ -226,6 +229,7 @@
             padding: 20px;
             box-shadow: var(--shadow-sm);
             overflow-x: auto;
+            width: 100%;
         }
 
         table {
@@ -258,6 +262,7 @@
             font-size: 0.75rem;
             font-weight: 600;
             display: inline-block;
+            white-space: nowrap;
         }
 
         .badge-available { background: #d4edda; color: #155724; }
@@ -293,6 +298,8 @@
             padding: 25px;
             margin-bottom: 25px;
             box-shadow: var(--shadow-sm);
+            width: 100%;
+            overflow-x: auto;
         }
 
         .section-header {
@@ -494,18 +501,200 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
+        /* Menu Overlay */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+            cursor: pointer;
+            backdrop-filter: blur(2px);
+        }
+
+        /* ========== RESPONSIVE DESIGN ========== */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
+                width: 85%;
+                max-width: 280px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1000;
             }
+            
             .sidebar.open {
                 transform: translateX(0);
             }
+            
             .main-content {
-                margin-left: 0;
+                margin-left: 0 !important;
+                width: 100%;
             }
+            
             .menu-toggle {
                 display: block;
+            }
+            
+            .content-area {
+                padding: 15px;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .stat-card {
+                padding: 15px;
+            }
+            
+            .stat-card .stat-number {
+                font-size: 1.5rem;
+            }
+            
+            /* Tables - allow horizontal scroll */
+            .table-container {
+                margin: 0;
+                padding: 0 0 10px 0;
+            }
+            
+            .table-container table {
+                min-width: 600px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
+            
+            .form-container {
+                padding: 15px;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .section-header h2 {
+                font-size: 1.1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .search-box input,
+            .search-box button {
+                width: 100%;
+            }
+            
+            .ddc-nav {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                gap: 8px;
+            }
+            
+            .ddc-class {
+                padding: 8px 3px;
+            }
+            
+            .ddc-class strong {
+                font-size: 0.9rem;
+            }
+            
+            .ddc-class small {
+                font-size: 0.7rem;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .quick-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 20px auto;
+                padding: 20px;
+            }
+            
+            .btn {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+            
+            .user-info {
+                gap: 10px;
+            }
+            
+            .user-name {
+                font-size: 0.85rem;
+            }
+            
+            .logout-btn {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+            }
+            
+            .menu-toggle {
+                padding: 8px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Small phones */
+        @media (max-width: 480px) {
+            .top-bar {
+                padding: 10px 12px;
+            }
+            
+            .content-area {
+                padding: 12px;
+            }
+            
+            .stat-card .stat-number {
+                font-size: 1.3rem;
+            }
+            
+            .stat-card i {
+                font-size: 1.5rem;
+            }
+            
+            .section-header h2 {
+                font-size: 1rem;
+            }
+            
+            .form-group label {
+                font-size: 0.8rem;
+            }
+            
+            .form-group input,
+            .form-group select {
+                padding: 10px;
+                font-size: 13px;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .action-btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -514,13 +703,12 @@
     <div class="app-wrapper">
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
-<!-- With this (for logo image) -->
-<div class="sidebar-header">
-    <img src="bss.png" alt="Library Logo" style="width: 60px; height: 60px; margin-bottom: 10px; border-radius: 50%;">
-    <h2>MC Library</h2>
-    <p>Integrated Management System</p>
-</div>            
-<nav class="sidebar-nav">
+            <div class="sidebar-header">
+                <img src="bss.png" alt="Library Logo" style="width: 60px; height: 60px; margin-bottom: 10px; border-radius: 50%;">
+                <h2>MC Library</h2>
+                <p>Integrated Management System</p>
+            </div>            
+            <nav class="sidebar-nav">
                 <div class="nav-item active" data-view="dashboard">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
@@ -589,27 +777,6 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-       
-        // ========== FIX HORIZONTAL SCROLL ON MOBILE ==========
-function fixHorizontalScroll() {
-    if (window.innerWidth <= 768) {
-        document.body.style.overflowX = 'hidden';
-        document.documentElement.style.overflowX = 'hidden';
-        
-        // Fix any elements that might cause scroll
-        const elements = document.querySelectorAll('.table-container, .form-container');
-        elements.forEach(el => {
-            if (el.scrollWidth > el.clientWidth) {
-                // Let table container scroll, but not the body
-                el.style.overflowX = 'auto';
-            }
-        });
-    }
-}
-
-// Run on load and resize
-window.addEventListener('load', fixHorizontalScroll);
-window.addEventListener('resize', fixHorizontalScroll);
 
         // ========== GLOBALS ==========
         let currentUser = null;
@@ -643,7 +810,6 @@ window.addEventListener('resize', fixHorizontalScroll);
             } else {
                 currentUser = user;
                 document.getElementById('userName').textContent = user.email.split('@')[0];
-                // Load dashboard immediately without showing loading
                 loadDashboard();
             }
         });
@@ -683,7 +849,10 @@ window.addEventListener('resize', fixHorizontalScroll);
                     recent.forEach(doc => {
                         const t = doc.data();
                         const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                        transactionsHtml += `<tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
+                        transactionsHtml += `
+
+
+                          <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
                     });
                 } catch(e) {}
 
@@ -832,11 +1001,11 @@ window.addEventListener('resize', fixHorizontalScroll);
                     <div class="form-container">
                         <div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button></div>
                         <div class="table-container">
-                            <table>
+                            <tr>
                                 <thead>
                                     <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th><th>Actions</th></tr>
                                 </thead>
-                                <tbody>${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>'}</tbody>
+                                <tbody>${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found<th>'} </tbody>
                             </table>
                         </div>
                     </div>`;
@@ -858,7 +1027,7 @@ window.addEventListener('resize', fixHorizontalScroll);
                 finesSnapshot.forEach(doc => {
                     const f = doc.data();
                     totalFines += f.totalFine || 0;
-                    finesHtml += `<tr>
+                    finesHtml += `TreeLabel
                         <td>${f.transactionId || 'N/A'}</td>
                         <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
                         <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
@@ -888,11 +1057,7 @@ window.addEventListener('resize', fixHorizontalScroll);
 
         // ========== DDC CLASSES ==========
         function loadDDCClasses() {
-            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Main Classes</h2></div><div class="table-container"><table><thead><tr><th>Class Number</th><th>Class Name</th><th>Description</th></tr></thead><tbody>${ddcMainClasses.map(ddc => `
-
-
-                         <td><strong>${ddc.number}</strong> </td><td>${ddc.name}</td><td>Books in ${ddc.name.toLowerCase()}</td>
-                     `).join('')}</tbody> </div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><h4><i class="fas fa-info-circle"></i> About DDC</h4><p>The Dewey Decimal Classification organizes library materials by discipline. The ten main classes (000-900) cover all major branches of knowledge.</p></div></div>`;
+            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Main Classes</h2></div><div class="table-container"><table><thead><tr><th>Class Number</th><th>Class Name</th><th>Description</th></tr></thead><tbody>${ddcMainClasses.map(ddc => `<tr><td><strong>${ddc.number}</strong></td><td>${ddc.name}</td><td>Books in ${ddc.name.toLowerCase()}</td></tr>`).join('')}</tbody></table></div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><h4><i class="fas fa-info-circle"></i> About DDC</h4><p>The Dewey Decimal Classification organizes library materials by discipline. The ten main classes (000-900) cover all major branches of knowledge.</p></div></div>`;
             document.getElementById('contentArea').innerHTML = html;
         }
 
@@ -1094,8 +1259,6 @@ window.addEventListener('resize', fixHorizontalScroll);
             });
         });
 
-        
-
         window.onclick = function(event) {
             const modal = document.getElementById('modal');
             if (event.target === modal) modal.style.display = 'none';
@@ -1117,71 +1280,60 @@ window.addEventListener('resize', fixHorizontalScroll);
         }, 2000);
     </script>
     <script>
-    // ========== MOBILE MENU FIX ==========
-    (function() {
-        const menuToggle = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
-        
-        // Don't run if elements don't exist
-        if (!menuToggle || !sidebar) return;
-        
-        // Create overlay element
-        const overlay = document.createElement('div');
-        overlay.className = 'menu-overlay';
-        document.body.appendChild(overlay);
-        
-        // Function to open menu
-        function openMenu() {
-            sidebar.classList.add('open');
-            overlay.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-            document.body.classList.add('menu-open');
-        }
-        
-        // Function to close menu
-        function closeMenu() {
-            sidebar.classList.remove('open');
-            overlay.style.display = 'none';
-            document.body.style.overflow = '';
-            document.body.classList.remove('menu-open');
-        }
-        
-        // Toggle menu on button click
-        menuToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (sidebar.classList.contains('open')) {
-                closeMenu();
-            } else {
-                openMenu();
+        // ========== MOBILE MENU FIX ==========
+        (function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (!menuToggle || !sidebar) return;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'menu-overlay';
+            document.body.appendChild(overlay);
+            
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                document.body.style.overflow = 'hidden';
             }
-        });
-        
-        // Close menu when clicking overlay
-        overlay.addEventListener('click', closeMenu);
-        
-        // Close menu when clicking on any nav item (on mobile)
-        document.querySelectorAll('.nav-item').forEach(function(item) {
-            item.addEventListener('click', function() {
-                if (window.innerWidth <= 768) {
+            
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            
+            menuToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (sidebar.classList.contains('open')) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            });
+            
+            overlay.addEventListener('click', closeMenu);
+            
+            document.querySelectorAll('.nav-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        closeMenu();
+                    }
+                });
+            });
+            
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
                     closeMenu();
                 }
             });
-        });
-        
-        // Close menu on window resize (if screen becomes larger)
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
-                closeMenu();
-            }
-        });
-        
-        // Close menu on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-                closeMenu();
-            }
-        });
-    })();
-</script>
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                    closeMenu();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
