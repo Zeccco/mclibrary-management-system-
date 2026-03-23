@@ -1312,6 +1312,19 @@ async function loadCatalog() {
             alert('Member is not active or not found');
             return;
         }
+        // Inside processCheckout function, after checking member is active:
+
+// Check borrowing limit
+const limitCheck = await checkBorrowingLimit(memberId);
+if (!limitCheck.allowed) {
+    alert(limitCheck.message);
+    return;
+}
+
+// Optional: Show warning if approaching limit
+if (limitCheck.remaining <= 1 && limitCheck.remaining > 0) {
+    showToast(`⚠️ Warning: This is the last book ${limitCheck.category} can borrow!`, 'warning');
+}
         
         // Create transaction
         const transactionId = 'T' + Date.now().toString().slice(-6);
