@@ -72,10 +72,6 @@
             color: white;
         }
 
-        .sidebar-header h2 i {
-            margin-right: 8px;
-        }
-
         .sidebar-header p {
             font-size: 0.75rem;
             opacity: 0.8;
@@ -267,6 +263,7 @@
 
         .badge-available { background: #d4edda; color: #155724; }
         .badge-borrowed { background: #f8d7da; color: #721c24; }
+        .badge-warning { background: #fff3cd; color: #856404; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
 
         /* Buttons */
@@ -558,7 +555,6 @@
                 font-size: 1.5rem;
             }
             
-            /* Tables - allow horizontal scroll */
             .table-container {
                 margin: 0;
                 padding: 0 0 10px 0;
@@ -852,7 +848,7 @@
                         transactionsHtml += `
 
 
-                          <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
+                           <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
                     });
                 } catch(e) {}
 
@@ -898,19 +894,21 @@
                 let booksHtml = '';
                 booksSnapshot.forEach(doc => {
                     const b = doc.data();
-                    booksHtml += `<tr>
-                        <td>${b.accessionNo || 'N/A'}</td>
-                        <td><strong>${b.title || 'N/A'}</strong></td>
-                        <td>${b.author || 'N/A'}</td>
-                        <td>${b.isbn || '-'}</td>
-                        <td>${b.subject || '-'}</td>
-                        <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
-                        <td>${b.year || '-'}</td>
-                        <td>${b.totalCopies || 0}</td>
-                        <td>${b.availableCopies || 0}</td>
-                        <td><span class="badge badge-${b.status === 'Available' ? 'available' : 'borrowed'}">${b.status || 'Available'}</span></td>
-                        <td><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
-                    </tr>`;
+                    booksHtml += `
+                        <tr>
+                            <td>${b.accessionNo || 'N/A'}</td>
+                            <td><strong>${b.title || 'N/A'}</strong></td>
+                            <td>${b.author || 'N/A'}</td>
+                            <td>${b.isbn || '-'}</td>
+                            <td>${b.subject || '-'}</td>
+                            <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
+                            <td>${b.year || '-'}</td>
+                            <td>${b.totalCopies || 0}</td>
+                            <td>${b.availableCopies || 0}</td>
+                            <td><span class="badge badge-${b.status === 'Available' ? 'available' : 'borrowed'}">${b.status || 'Available'}</span></td>
+                            <td><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
+                        </tr>
+                    `;
                 });
 
                 const html = `
@@ -943,14 +941,16 @@
                 let membersHtml = '';
                 membersSnapshot.forEach(doc => {
                     const m = doc.data();
-                    membersHtml += `<tr>
-                        <td><strong>${m.memberId || 'N/A'}</strong></td>
-                        <td>${m.name || 'N/A'}</td>
-                        <td><span class="badge badge-info">${m.category || 'N/A'}</span></td>
-                        <td>${m.phone || 'N/A'}</td>
-                        <td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span></td>
-                        <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
-                    </tr>`;
+                    membersHtml += `
+                        <tr>
+                            <td><strong>${m.memberId || 'N/A'}</strong></td>
+                            <td>${m.name || 'N/A'}</td>
+                            <td><span class="badge badge-info">${m.category || 'N/A'}</span></td>
+                            <td>${m.phone || 'N/A'}</td>
+                            <td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span></td>
+                            <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
+                        </tr>
+                    `;
                 });
 
                 const html = `
@@ -972,7 +972,7 @@
             }
         }
 
-        // ========== CIRCULATION ==========
+        // ========== CIRCULATION - CORRECTED ==========
         async function loadCirculation() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading circulation...</p></div>';
@@ -980,38 +980,68 @@
             try {
                 const transactionsSnapshot = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let transactionsHtml = '';
-                transactionsSnapshot.forEach(doc => {
-                    const t = doc.data();
-                    const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-';
-                    const dueDate = t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-';
-                    const returnDate = t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-';
-                    transactionsHtml += `<tr>
-                        <td>${t.transactionId || 'N/A'}</td>
-                        <td><strong>${t.accessionNo || 'N/A'}</strong></td>
-                        <td>${t.memberId || 'N/A'}</td>
-                        <td>${issueDate}</td>
-                        <td>${dueDate}</td>
-                        <td>${returnDate}</td>
-                        <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
-                        <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td>
-                    </tr>`;
-                });
+                
+                if (transactionsSnapshot.empty) {
+                    transactionsHtml = '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>';
+                } else {
+                    transactionsSnapshot.forEach(doc => {
+                        const t = doc.data();
+                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-';
+                        const dueDate = t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-';
+                        const returnDate = t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-';
+                        const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
+                        const statusClass = isOverdue ? 'warning' : (t.status === 'Borrowed' ? 'borrowed' : 'available');
+                        const statusText = t.status || 'N/A';
+                        
+                        transactionsHtml += `
+                            <tr>
+                                <td>${t.transactionId || 'N/A'}</td>
+                                <td><strong>${t.accessionNo || 'N/A'}</strong></td>
+                                <td>${t.memberId || 'N/A'}</td>
+                                <td>${issueDate}</td>
+                                <td>${dueDate}</td>
+                                <td>${returnDate}</td>
+                                <td><span class="badge badge-${statusClass}">${statusText}${isOverdue ? ' (Overdue)' : ''}</span></td>
+                                <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                }
 
                 const html = `
                     <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button></div>
+                        <div class="section-header">
+                            <h2><i class="fas fa-exchange-alt"></i> Circulation</h2>
+                            <button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
+                        </div>
+                        <div class="search-box">
+                            <input type="text" id="circulationSearch" placeholder="Search by transaction ID, accession no, or member ID...">
+                            <button class="btn btn-primary" onclick="searchCirculation()"><i class="fas fa-search"></i> Search</button>
+                        </div>
                         <div class="table-container">
-                            <tr>
+                             <table>
                                 <thead>
-                                    <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th><th>Actions</th></tr>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Accession No</th>
+                                        <th>Member ID</th>
+                                        <th>Issue Date</th>
+                                        <th>Due Date</th>
+                                        <th>Return Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
                                 </thead>
-                                <tbody>${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found<th>'} </tbody>
+                                <tbody id="circulationTableBody">
+                                    ${transactionsHtml}
+                                </tbody>
                             </table>
                         </div>
                     </div>`;
                 contentArea.innerHTML = html;
             } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation</div>';
+                console.error('Error loading circulation:', error);
+                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation. Please check your Firebase connection.</div>';
             }
         }
 
@@ -1024,19 +1054,26 @@
                 const finesSnapshot = await db.collection('fines').get();
                 let finesHtml = '';
                 let totalFines = 0;
-                finesSnapshot.forEach(doc => {
-                    const f = doc.data();
-                    totalFines += f.totalFine || 0;
-                    finesHtml += `TreeLabel
-                        <td>${f.transactionId || 'N/A'}</td>
-                        <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
-                        <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
-                        <td>${f.daysLate || 0}</td>
-                        <td>K${f.finePerDay || 500}</td>
-                        <td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td>
-                        <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                    </tr>`;
-                });
+                
+                if (finesSnapshot.empty) {
+                    finesHtml = '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>';
+                } else {
+                    finesSnapshot.forEach(doc => {
+                        const f = doc.data();
+                        totalFines += f.totalFine || 0;
+                        finesHtml += `
+                            <tr>
+                                <td>${f.transactionId || 'N/A'}</td>
+                                <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
+                                <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
+                                <td>${f.daysLate || 0}</td>
+                                <td>K${f.finePerDay || 500}</td>
+                                <td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td>
+                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
+                            </tr>
+                        `;
+                    });
+                }
 
                 const html = `
                     <div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Outstanding Fines</h3><div class="stat-number" style="color:#e74c3c">K${totalFines}</div></div></div>
@@ -1044,13 +1081,22 @@
                     <div class="table-container">
                         <table>
                             <thead>
-                                <tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Action</th></tr>
+                                <tr>
+                                    <th>Transaction ID</th>
+                                    <th>Due Date</th>
+                                    <th>Return Date</th>
+                                    <th>Days Late</th>
+                                    <th>Fine per Day</th>
+                                    <th>Total Fine</th>
+                                    <th>Action</th>
+                                </tr>
                             </thead>
-                            <tbody>${finesHtml || '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>'}</tbody>
+                            <tbody>${finesHtml}</tbody>
                         </table>
                     </div></div>`;
                 contentArea.innerHTML = html;
             } catch (error) {
+                console.error('Error loading fines:', error);
                 contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading fines</div>';
             }
         }
@@ -1235,6 +1281,18 @@
             const term = document.getElementById('memberSearch')?.value.toLowerCase() || '';
             const rows = document.querySelectorAll('#membersTableBody tr');
             rows.forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
+        }
+
+        function searchCirculation() {
+            const term = document.getElementById('circulationSearch')?.value.toLowerCase() || '';
+            const rows = document.querySelectorAll('#circulationTableBody tr');
+            rows.forEach(row => {
+                if (row.textContent.toLowerCase().includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
 
         function filterByDDC(ddc) {
