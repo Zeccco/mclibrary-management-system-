@@ -776,6 +776,7 @@
 
         // ========== GLOBALS ==========
         let currentUser = null;
+        let currentUserRole = null;
 
         const ddcMainClasses = [
             { number: '000', name: 'General Works' },
@@ -790,6 +791,221 @@
             { number: '900', name: 'History & Geography' }
         ];
 
+        // ========== ROLE FUNCTIONS ==========
+        async function loadUserRole() {
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        currentUserRole = userDoc.data().role;
+                    } else {
+                        const usersSnapshot = await db.collection('users').limit(1).get();
+                        currentUserRole = usersSnapshot.empty ? 'admin' : 'staff';
+                        await db.collection('users').doc(user.uid).set({
+                            email: user.email,
+                            name: user.email.split('@')[0],
+                            role: currentUserRole,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                } catch (error) {
+                    currentUserRole = 'staff';
+                }
+                return currentUserRole;
+            }
+            return null;
+        }
+
+        function isAdmin() { return currentUserRole === 'admin'; }
+        function isLibrarian() { return currentUserRole === 'librarian'; }
+        function isStaff() { return currentUserRole === 'staff' || !currentUserRole; }
+        function canEditBooks() { return isAdmin() || isLibrarian(); }
+        function canEditMembers() { return isAdmin() || isLibrarian(); }
+        function canManageCirculation() { return isAdmin() || isLibrarian(); }
+        function canDeleteData() { return isAdmin(); }
+
+        // ========== ROLE-BASED UI CONTROL ==========
+        async function loadUserRoleForDashboard() {
+            await loadUserRole();
+            updateDashboardUIForRole();
+            if (isAdmin()) {
+                addAdminLinkToSidebar();
+            }
+            displayUserRole();
+        }
+
+        function updateDashboardUIForRole() {
+            const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
+            const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
+            const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
+            
+            if (isStaff()) {
+                if (addBookBtn) addBookBtn.style.display = 'none';
+                if (addMemberBtn) addMemberBtn.style.display = 'none';
+                if (checkoutBtn) checkoutBtn.style.display = 'none';
+                hideDeleteButtons();
+                disableReturnButtons();
+                showToast('You are in read-only mode (Staff)', 'info');
+            } else if (isLibrarian()) {
+                if (addBookBtn) addBookBtn.style.display = 'inline-flex';
+                if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
+                if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
+                hideDeleteButtons();
+                showToast('Librarian mode - You can manage books, members, and circulation', 'info');
+            } else if (isAdmin()) {
+                showToast('Admin mode - Full access', 'success');
+            }
+        }
+
+        function hideDeleteButtons() {
+            const deleteButtons = document.querySelectorAll('.btn-danger');
+            deleteButtons.forEach(btn => {
+                if (btn.textContent.includes('Delete') || btn.onclick?.toString().includes('delete')) {
+                    btn.style.display = 'none';
+                }
+            });
+        }
+
+        function disableReturnButtons() {
+            const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
+            returnButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                btn.title = 'Staff cannot process returns';
+            });
+        }
+
+        function addAdminLinkToSidebar() {
+            const sidebarNav = document.querySelector('.sidebar-nav');
+            if (sidebarNav && !document.querySelector('.admin-nav-link')) {
+                const adminLink = document.createElement('div');
+                adminLink.className = 'nav-item admin-nav-link';
+                adminLink.setAttribute('data-view', 'admin');
+                adminLink.innerHTML = `<i class="fas fa-user-shield"></i><span>User Management</span>`;
+                adminLink.onclick = () => { window.location.href = 'admin.html'; };
+                sidebarNav.appendChild(adminLink);
+            }
+        }
+
+        function displayUserRole() {
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo && !document.querySelector('.user-role-badge')) {
+                const roleBadge = document.createElement('span');
+                roleBadge.className = 'user-role-badge';
+                let roleText = '', roleColor = '';
+                if (isAdmin()) {
+                    roleText = 'Admin';
+                    roleColor = '#e74c3c';
+                } else if (isLibrarian()) {
+                    roleText = 'Librarian';
+                    roleColor = '#27ae60';
+                } else {
+                    roleText = 'Staff';
+                    roleColor = '#3498db';
+                }
+                roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
+                userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
+            }
+        }
+
+        // Override functions with role checks
+        const originalDeleteBook = window.deleteBook;
+        window.deleteBook = async function(bookId) {
+            if (!canDeleteData()) {
+                showToast('Permission denied: Only admins can delete books', 'error');
+                return;
+            }
+            if (confirm('Delete this book?')) {
+                if (originalDeleteBook) await originalDeleteBook(bookId);
+                else {
+                    try { await db.collection('books').doc(bookId).delete(); loadCatalog(); showToast('Book deleted', 'success'); } 
+                    catch (error) { alert('Error: ' + error.message); }
+                }
+            }
+        };
+
+        const originalDeleteMember = window.deleteMember;
+        window.deleteMember = async function(memberId) {
+            if (!canDeleteData()) {
+                showToast('Permission denied: Only admins can delete members', 'error');
+                return;
+            }
+            if (confirm('Delete this member?')) {
+                if (originalDeleteMember) await originalDeleteMember(memberId);
+                else {
+                    try { await db.collection('members').doc(memberId).delete(); loadMembers(); showToast('Member deleted', 'success'); } 
+                    catch (error) { alert('Error: ' + error.message); }
+                }
+            }
+        };
+
+        const originalShowAddBookForm = window.showAddBookForm;
+        window.showAddBookForm = function() {
+            if (!canEditBooks()) {
+                showToast('Permission denied: Only admins and librarians can add books', 'error');
+                return;
+            }
+            if (originalShowAddBookForm) originalShowAddBookForm();
+            else {
+                const modal = document.getElementById('modal');
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = `
+                    <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add New Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                    <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="accessionNo" required placeholder="e.g., A001"></div>
+                    <div class="form-group"><label>Title *</label><input type="text" id="title" required></div>
+                    <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
+                    <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC Number *</label><select id="ddcNumber" required><option value="">Select</option>${ddcMainClasses.map(d => `<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                    <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year" min="1900" max="2026"></div><div class="form-group"><label>Total Copies *</label><input type="number" id="totalCopies" value="1" min="1" required></div></div>
+                    <button type="submit" class="btn btn-success" style="width:100%">Save Book</button></form>`;
+                modal.style.display = 'block';
+            }
+        };
+
+        const originalShowAddMemberForm = window.showAddMemberForm;
+        window.showAddMemberForm = function() {
+            if (!canEditMembers()) {
+                showToast('Permission denied: Only admins and librarians can add members', 'error');
+                return;
+            }
+            if (originalShowAddMemberForm) originalShowAddMemberForm();
+            else {
+                const modal = document.getElementById('modal');
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = `
+                    <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add New Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                    <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID *</label><input type="text" id="memberId" required placeholder="e.g., M001"></div>
+                    <div class="form-group"><label>Full Name *</label><input type="text" id="memberName" required></div>
+                    <div class="form-row"><div class="form-group"><label>Category *</label><select id="memberCategory" required><option value="">Select</option><option value="Student">Student</option><option value="Teaching Staff">Teaching Staff</option><option value="Non-Teaching Staff">Non-Teaching Staff</option><option value="External Member">External Member</option></select></div>
+                    <div class="form-group"><label>Phone *</label><input type="tel" id="memberPhone" required></div></div>
+                    <div class="form-group"><label>Status *</label><select id="memberStatus" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+                    <button type="submit" class="btn btn-success" style="width:100%">Save Member</button></form>`;
+                modal.style.display = 'block';
+            }
+        };
+
+        const originalShowCheckoutForm = window.showCheckoutForm;
+        window.showCheckoutForm = function() {
+            if (!canManageCirculation()) {
+                showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
+                return;
+            }
+            if (originalShowCheckoutForm) originalShowCheckoutForm();
+            else {
+                const modal = document.getElementById('modal');
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = `
+                    <div class="modal-header"><h3><i class="fas fa-hand-holding"></i> New Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                    <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="checkoutAccessionNo" required placeholder="e.g., A001"></div>
+                    <div class="form-group"><label>Member ID *</label><input type="text" id="checkoutMemberId" required placeholder="e.g., M001"></div>
+                    <div class="form-row"><div class="form-group"><label>Issue Date *</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
+                    <div class="form-group"><label>Loan Period *</label><select id="loanPeriod"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
+                    <button type="submit" class="btn btn-success" style="width:100%">Process Checkout</button></form>`;
+                modal.style.display = 'block';
+            }
+        };
+
         // ========== AUTHENTICATION ==========
         function handleLogout() {
             auth.signOut().then(() => {
@@ -800,12 +1016,13 @@
             });
         }
 
-        auth.onAuthStateChanged((user) => {
+        auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'index.html';
             } else {
                 currentUser = user;
                 document.getElementById('userName').textContent = user.email.split('@')[0];
+                await loadUserRoleForDashboard();
                 loadDashboard();
             }
         });
@@ -824,207 +1041,131 @@
         }
 
         // ========== DASHBOARD ==========
-        // ========== DASHBOARD ==========
-async function loadDashboard() {
-    const contentArea = document.getElementById('contentArea');
-    contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading dashboard...</p></div>';
-    
-    try {
-        const booksSnapshot = await db.collection('books').get();
-        const membersSnapshot = await db.collection('members').get();
-        const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
-
-        // Calculate TOTAL PHYSICAL BOOKS (sum of all copies)
-        let totalBooksCount = 0;
-        let totalAvailableCopies = 0;
-        let totalBorrowedCopies = 0;
-        
-        booksSnapshot.forEach(doc => {
-            const book = doc.data();
-            const totalCopies = book.totalCopies || 0;
-            const availableCopies = book.availableCopies || 0;
+        async function loadDashboard() {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading dashboard...</p></div>';
             
-            totalBooksCount += totalCopies;
-            totalAvailableCopies += availableCopies;
-            totalBorrowedCopies += (totalCopies - availableCopies);
-        });
+            try {
+                const booksSnapshot = await db.collection('books').get();
+                const membersSnapshot = await db.collection('members').get();
+                const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
 
-        const totalMembers = membersSnapshot.size;
-        const activeBorrowings = borrowedSnapshot.size;
-
-        let transactionsHtml = '';
-        try {
-            const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
-            recent.forEach(doc => {
-                const t = doc.data();
-                const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                transactionsHtml += `
-                    <tr>
-                        <td>${t.transactionId || 'N/A'}</td>
-                        <td>${t.accessionNo || 'N/A'}</td>
-                        <td>${t.memberId || 'N/A'}</td>
-                        <td>${issueDate}</td>
-                        <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
-                    </tr>
-                `;
-            });
-        } catch(e) {}
-
-        const html = `
-            <div class="stats-container">
-                <div class="stat-card">
-                    <i class="fas fa-book"></i>
-                    <h3>Total Books (Copies)</h3>
-                    <div class="stat-number">${totalBooksCount}</div>
-                    <small style="color: #6c757d;">${booksSnapshot.size} unique titles</small>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>Available Books</h3>
-                    <div class="stat-number">${totalAvailableCopies}</div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-exchange-alt"></i>
-                    <h3>Borrowed Books</h3>
-                    <div class="stat-number">${totalBorrowedCopies}</div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-users"></i>
-                    <h3>Total Members</h3>
-                    <div class="stat-number">${totalMembers}</div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-clock"></i>
-                    <h3>Active Borrowings</h3>
-                    <div class="stat-number">${activeBorrowings}</div>
-                </div>
-            </div>
-            <div class="form-container">
-                <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr>
-                        </thead>
-                        <tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="quick-actions">
-                <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
-                <button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button>
-                <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
-            </div>
-        `;
-        contentArea.innerHTML = html;
-    } catch (error) {
-        console.error('Error loading dashboard:', error);
-        contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard. Please check your Firebase connection.</div>';
-    }
-}
-
-        // ========== CATALOG ==========
-     // ========== CATALOG ==========
-async function loadCatalog() {
-    const contentArea = document.getElementById('contentArea');
-    contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading catalog...</p></div>';
-    
-    try {
-        const booksSnapshot = await db.collection('books').orderBy('accessionNo').get();
-        let booksHtml = '';
-        
-        if (booksSnapshot.empty) {
-            booksHtml = '<tr><td colspan="11" style="text-align:center">No books. Click "Add New Book" to get started!</td></tr>';
-        } else {
-            booksSnapshot.forEach(doc => {
-                const b = doc.data();
-                const total = b.totalCopies || 0;
-                const available = b.availableCopies || 0;
-                const borrowed = total - available;
-                const status = available > 0 ? 'Available' : 'Borrowed';
-                const statusClass = available > 0 ? 'available' : 'borrowed';
+                let totalBooksCount = 0;
+                let totalAvailableCopies = 0;
+                let totalBorrowedCopies = 0;
                 
-                booksHtml += `
-                    <tr>
-                        <td><strong>${b.accessionNo || 'N/A'}</strong></td>
-                        <td>${b.title || 'N/A'}</td>
-                        <td>${b.author || 'N/A'}</td>
-                        <td>${b.isbn || '-'}</td>
-                        <td>${b.subject || '-'}</td>
-                        <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
-                        <td>${b.year || '-'}</td>
-                        <td style="text-align: center;"><strong>${total}</strong></td>
-                        <td style="text-align: center;">
-                            <span style="color: ${available > 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${available}</span> / ${total}
-                            ${borrowed > 0 ? `<small> (${borrowed} borrowed)</small>` : ''}
-                        </td>
-                        <td><span class="badge badge-${statusClass}">${status}</span></td>
-                        <td>
-                           <td>
-    <button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">
-        <i class="fas fa-edit"></i> Edit
-    </button>
-    <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">
-        <i class="fas fa-trash"></i> Delete
-    </button>
-</td> </button>
-                        </td>
-                    </tr>
+                booksSnapshot.forEach(doc => {
+                    const book = doc.data();
+                    const totalCopies = book.totalCopies || 0;
+                    const availableCopies = book.availableCopies || 0;
+                    totalBooksCount += totalCopies;
+                    totalAvailableCopies += availableCopies;
+                    totalBorrowedCopies += (totalCopies - availableCopies);
+                });
+
+                const totalMembers = membersSnapshot.size;
+                const activeBorrowings = borrowedSnapshot.size;
+
+                let transactionsHtml = '';
+                try {
+                    const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
+                    recent.forEach(doc => {
+                        const t = doc.data();
+                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
+                        transactionsHtml += `
+                            <tr>
+                                <td>${t.transactionId || 'N/A'}</td>
+                                <td>${t.accessionNo || 'N/A'}</td>
+                                <td>${t.memberId || 'N/A'}</td>
+                                <td>${issueDate}</td>
+                                <td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td>
+                            </tr>
+                        `;
+                    });
+                } catch(e) {}
+
+                const html = `
+                    <div class="stats-container">
+                        <div class="stat-card"><i class="fas fa-book"></i><h3>Total Books (Copies)</h3><div class="stat-number">${totalBooksCount}</div><small>${booksSnapshot.size} unique titles</small></div>
+                        <div class="stat-card"><i class="fas fa-check-circle"></i><h3>Available Books</h3><div class="stat-number">${totalAvailableCopies}</div></div>
+                        <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed Books</h3><div class="stat-number">${totalBorrowedCopies}</div></div>
+                        <div class="stat-card"><i class="fas fa-users"></i><h3>Total Members</h3><div class="stat-number">${totalMembers}</div></div>
+                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${activeBorrowings}</div></div>
+                    </div>
+                    <div class="form-container">
+                        <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
+                                <tbody>${transactionsHtml || '<tr><td colspan="5" style="text-align:center">No transactions</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
+                        <button class="btn btn-success" onclick="showAddMemberForm()"><i class="fas fa-user-plus"></i> Add Member</button>
+                        <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
+                    </div>
                 `;
-            });
+                contentArea.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading dashboard. Please check your Firebase connection.</div>';
+            }
         }
 
-        const html = `
-            <div class="form-container">
-                <div class="section-header">
-                    <h2><i class="fas fa-books"></i> DDC Catalog</h2>
-                    <button class="btn btn-success" onclick="showAddBookForm()">
-                        <i class="fas fa-plus"></i> Add New Book
-                    </button>
-                </div>
-                <div class="search-box">
-                    <input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number...">
-                    <button class="btn btn-primary" onclick="searchCatalog()">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                </div>
-                <div class="ddc-nav">
-                    ${ddcMainClasses.map(ddc => `
-                        <div class="ddc-class" onclick="filterByDDC('${ddc.number}')">
-                            <strong>${ddc.number}</strong><br>
-                            <small>${ddc.name}</small>
+        // ========== CATALOG ==========
+        async function loadCatalog() {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading catalog...</p></div>';
+            
+            try {
+                const booksSnapshot = await db.collection('books').orderBy('accessionNo').get();
+                let booksHtml = '';
+                
+                booksSnapshot.forEach(doc => {
+                    const b = doc.data();
+                    const total = b.totalCopies || 0;
+                    const available = b.availableCopies || 0;
+                    const borrowed = total - available;
+                    const status = available > 0 ? 'Available' : 'Borrowed';
+                    const statusClass = available > 0 ? 'available' : 'borrowed';
+                    
+                    booksHtml += `
+                        <tr>
+                            <td><strong>${b.accessionNo || 'N/A'}</strong></td>
+                            <td>${b.title || 'N/A'}</td>
+                            <td>${b.author || 'N/A'}</td>
+                            <td>${b.isbn || '-'}</td>
+                            <td>${b.subject || '-'}</td>
+                            <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
+                            <td>${b.year || '-'}</td>
+                            <td style="text-align: center;"><strong>${total}</strong></td>
+                            <td style="text-align: center;"><span style="color: ${available > 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${available}</span> / ${total}${borrowed > 0 ? `<small> (${borrowed} borrowed)</small>` : ''}</td>
+                            <td><span class="badge badge-${statusClass}">${status}</span></td>
+                            <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
+                        </tr>
+                    `;
+                });
+
+                const html = `
+                    <div class="form-container">
+                        <div class="section-header"><h2><i class="fas fa-books"></i> DDC Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add New Book</button></div>
+                        <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()"><i class="fas fa-search"></i> Search</button></div>
+                        <div class="ddc-nav">${ddcMainClasses.map(ddc => `<div class="ddc-class" onclick="filterByDDC('${ddc.number}')"><strong>${ddc.number}</strong><br><small>${ddc.name}</small></div>`).join('')}</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11" style="text-align:center">No books. Click "Add New Book" to get started!</td></tr>'}</tbody>
+                            </table>
                         </div>
-                    `).join('')}
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Accession</th>
-                                <th>Title</th>
-                                <th>Author</th>
-                                <th>ISBN</th>
-                                <th>Subject</th>
-                                <th>DDC</th>
-                                <th>Year</th>
-                                <th>Total</th>
-                                <th>Available</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="catalogTableBody">
-                            ${booksHtml}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-        contentArea.innerHTML = html;
-    } catch (error) {
-        console.error('Error loading catalog:', error);
-        contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>';
-    }
-}
+                    </div>`;
+                contentArea.innerHTML = html;
+            } catch (error) {
+                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>';
+            }
+        }
+
         // ========== MEMBERS ==========
         async function loadMembers() {
             const contentArea = document.getElementById('contentArea');
@@ -1053,9 +1194,7 @@ async function loadCatalog() {
                         <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name or ID..."><button class="btn btn-primary" onclick="searchMembers()"><i class="fas fa-search"></i> Search</button></div>
                         <div class="table-container">
                             <table>
-                                <thead>
-                                    <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
-                                </thead>
+                                <thead><tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
                                 <tbody id="membersTableBody">${membersHtml || '<tr><td colspan="6" style="text-align:center">No members registered</td></tr>'}</tbody>
                             </table>
                         </div>
@@ -1066,7 +1205,7 @@ async function loadCatalog() {
             }
         }
 
-        // ========== CIRCULATION - CORRECTED ==========
+        // ========== CIRCULATION ==========
         async function loadCirculation() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading circulation...</p></div>';
@@ -1075,67 +1214,42 @@ async function loadCatalog() {
                 const transactionsSnapshot = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let transactionsHtml = '';
                 
-                if (transactionsSnapshot.empty) {
-                    transactionsHtml = '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>';
-                } else {
-                    transactionsSnapshot.forEach(doc => {
-                        const t = doc.data();
-                        const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-';
-                        const dueDate = t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-';
-                        const returnDate = t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-';
-                        const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
-                        const statusClass = isOverdue ? 'warning' : (t.status === 'Borrowed' ? 'borrowed' : 'available');
-                        const statusText = t.status || 'N/A';
-                        
-                        transactionsHtml += `
-                            <tr>
-                                <td>${t.transactionId || 'N/A'}</td>
-                                <td><strong>${t.accessionNo || 'N/A'}</strong></td>
-                                <td>${t.memberId || 'N/A'}</td>
-                                <td>${issueDate}</td>
-                                <td>${dueDate}</td>
-                                <td>${returnDate}</td>
-                                <td><span class="badge badge-${statusClass}">${statusText}${isOverdue ? ' (Overdue)' : ''}</span></td>
-                                <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td>
-                            </tr>
-                        `;
-                    });
-                }
+                transactionsSnapshot.forEach(doc => {
+                    const t = doc.data();
+                    const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-';
+                    const dueDate = t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-';
+                    const returnDate = t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-';
+                    const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
+                    const statusClass = isOverdue ? 'warning' : (t.status === 'Borrowed' ? 'borrowed' : 'available');
+                    
+                    transactionsHtml += `
+                        <tr>
+                            <td>${t.transactionId || 'N/A'}</td>
+                            <td><strong>${t.accessionNo || 'N/A'}</strong></td>
+                            <td>${t.memberId || 'N/A'}</td>
+                            <td>${issueDate}</td>
+                            <td>${dueDate}</td>
+                            <td>${returnDate}</td>
+                            <td><span class="badge badge-${statusClass}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span></td>
+                            <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')"><i class="fas fa-undo"></i> Return</button>` : '-'}</td>
+                        </tr>
+                    `;
+                });
 
                 const html = `
                     <div class="form-container">
-                        <div class="section-header">
-                            <h2><i class="fas fa-exchange-alt"></i> Circulation</h2>
-                            <button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button>
-                        </div>
-                        <div class="search-box">
-                            <input type="text" id="circulationSearch" placeholder="Search by transaction ID, accession no, or member ID...">
-                            <button class="btn btn-primary" onclick="searchCirculation()"><i class="fas fa-search"></i> Search</button>
-                        </div>
+                        <div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> New Checkout</button></div>
+                        <div class="search-box"><input type="text" id="circulationSearch" placeholder="Search by transaction ID, accession no, or member ID..."><button class="btn btn-primary" onclick="searchCirculation()"><i class="fas fa-search"></i> Search</button></div>
                         <div class="table-container">
-                             <table>
-                                <thead>
-                                    <tr>
-                                        <th>Transaction ID</th>
-                                        <th>Accession No</th>
-                                        <th>Member ID</th>
-                                        <th>Issue Date</th>
-                                        <th>Due Date</th>
-                                        <th>Return Date</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="circulationTableBody">
-                                    ${transactionsHtml}
-                                </tbody>
+                            <table>
+                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="circulationTableBody">${transactionsHtml || '<tr><td colspan="8" style="text-align:center">No transactions found</td></tr>'}</tbody>
                             </table>
                         </div>
                     </div>`;
                 contentArea.innerHTML = html;
             } catch (error) {
-                console.error('Error loading circulation:', error);
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation. Please check your Firebase connection.</div>';
+                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading circulation</div>';
             }
         }
 
@@ -1149,48 +1263,33 @@ async function loadCatalog() {
                 let finesHtml = '';
                 let totalFines = 0;
                 
-                if (finesSnapshot.empty) {
-                    finesHtml = '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>';
-                } else {
-                    finesSnapshot.forEach(doc => {
-                        const f = doc.data();
-                        totalFines += f.totalFine || 0;
-                        finesHtml += `
-                            <tr>
-                                <td>${f.transactionId || 'N/A'}</td>
-                                <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
-                                <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
-                                <td>${f.daysLate || 0}</td>
-                                <td>K${f.finePerDay || 500}</td>
-                                <td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td>
-                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                            </tr>
-                        `;
-                    });
-                }
+                finesSnapshot.forEach(doc => {
+                    const f = doc.data();
+                    totalFines += f.totalFine || 0;
+                    finesHtml += `
+                        <tr>
+                            <td>${f.transactionId || 'N/A'}</td>
+                            <td>${f.dueDate ? new Date(f.dueDate.toDate()).toLocaleDateString() : '-'}</td>
+                            <td>${f.returnDate ? new Date(f.returnDate.toDate()).toLocaleDateString() : '-'}</td>
+                            <td>${f.daysLate || 0}</td>
+                            <td>K${f.finePerDay || 500}</td>
+                            <td><strong style="color:#e74c3c">K${f.totalFine || 0}</strong></td>
+                            <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')">Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
+                        </tr>
+                    `;
+                });
 
                 const html = `
                     <div class="stats-container"><div class="stat-card"><i class="fas fa-money-bill-wave"></i><h3>Total Outstanding Fines</h3><div class="stat-number" style="color:#e74c3c">K${totalFines}</div></div></div>
                     <div class="form-container"><div class="section-header"><h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2></div>
                     <div class="table-container">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Transaction ID</th>
-                                    <th>Due Date</th>
-                                    <th>Return Date</th>
-                                    <th>Days Late</th>
-                                    <th>Fine per Day</th>
-                                    <th>Total Fine</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>${finesHtml}</tbody>
+                            <thead><tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Action</th></tr></thead>
+                            <tbody>${finesHtml || '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>'}</tbody>
                         </table>
                     </div></div>`;
                 contentArea.innerHTML = html;
             } catch (error) {
-                console.error('Error loading fines:', error);
                 contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading fines</div>';
             }
         }
@@ -1203,47 +1302,18 @@ async function loadCatalog() {
 
         // ========== FORM FUNCTIONS ==========
         function showAddBookForm() {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modalContent');
-            modalContent.innerHTML = `
-                <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add New Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="saveBook(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="accessionNo" required placeholder="e.g., A001"></div>
-                <div class="form-group"><label>Title *</label><input type="text" id="title" required></div>
-                <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="author" required></div><div class="form-group"><label>ISBN</label><input type="text" id="isbn"></div></div>
-                <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="subject"></div><div class="form-group"><label>DDC Number *</label><select id="ddcNumber" required><option value="">Select</option>${ddcMainClasses.map(d => `<option value="${d.number}">${d.number} - ${d.name}</option>`).join('')}</select></div></div>
-                <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="year" min="1900" max="2026"></div><div class="form-group"><label>Total Copies *</label><input type="number" id="totalCopies" value="1" min="1" required></div></div>
-                <button type="submit" class="btn btn-success" style="width:100%">Save Book</button></form>`;
-            modal.style.display = 'block';
+            // Already overridden above
+            window.showAddBookForm();
         }
 
         function showAddMemberForm() {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modalContent');
-            modalContent.innerHTML = `
-                <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add New Member</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="saveMember(event)"><div class="form-group"><label>Member ID *</label><input type="text" id="memberId" required placeholder="e.g., M001"></div>
-                <div class="form-group"><label>Full Name *</label><input type="text" id="memberName" required></div>
-                <div class="form-row"><div class="form-group"><label>Category *</label><select id="memberCategory" required><option value="">Select</option><option value="Student">Student</option><option value="Teaching Staff">Teaching Staff</option><option value="Non-Teaching Staff">Non-Teaching Staff</option><option value="External Member">External Member</option></select></div>
-                <div class="form-group"><label>Phone *</label><input type="tel" id="memberPhone" required></div></div>
-                <div class="form-group"><label>Status *</label><select id="memberStatus" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-                <button type="submit" class="btn btn-success" style="width:100%">Save Member</button></form>`;
-            modal.style.display = 'block';
+            window.showAddMemberForm();
         }
 
         function showCheckoutForm() {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modalContent');
-            modalContent.innerHTML = `
-                <div class="modal-header"><h3><i class="fas fa-hand-holding"></i> New Checkout</h3><span class="close" onclick="closeModal()">&times;</span></div>
-                <form onsubmit="processCheckout(event)"><div class="form-group"><label>Accession Number *</label><input type="text" id="checkoutAccessionNo" required placeholder="e.g., A001"></div>
-                <div class="form-group"><label>Member ID *</label><input type="text" id="checkoutMemberId" required placeholder="e.g., M001"></div>
-                <div class="form-row"><div class="form-group"><label>Issue Date *</label><input type="date" id="issueDate" value="${new Date().toISOString().split('T')[0]}" required></div>
-                <div class="form-group"><label>Loan Period *</label><select id="loanPeriod"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="21">21 days</option><option value="30">30 days</option></select></div></div>
-                <button type="submit" class="btn btn-success" style="width:100%">Process Checkout</button></form>`;
-            modal.style.display = 'block';
+            window.showCheckoutForm();
         }
 
-        // ========== DATA OPERATIONS ==========
         async function saveBook(event) {
             event.preventDefault();
             const bookData = {
@@ -1286,180 +1356,85 @@ async function loadCatalog() {
         }
 
         async function processCheckout(event) {
-    event.preventDefault();
-    const accessionNo = document.getElementById('checkoutAccessionNo').value;
-    const memberId = document.getElementById('checkoutMemberId').value;
-    const issueDate = new Date(document.getElementById('issueDate').value);
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + parseInt(document.getElementById('loanPeriod').value));
-    
-    try {
-        // Find the book by accession number (regardless of status)
-        const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
-        
-        if (booksSnapshot.empty) {
-            alert('Book not found');
-            return;
-        }
-        
-        const bookDoc = booksSnapshot.docs[0];
-        const bookData = bookDoc.data();
-        
-        // Check if there are available copies
-        if (bookData.availableCopies <= 0) {
-            alert('No copies available for checkout. All ' + bookData.totalCopies + ' copies are borrowed.');
-            return;
-        }
-        
-        // Check if member is active
-        const membersSnapshot = await db.collection('members').where('memberId', '==', memberId).where('status', '==', 'Active').get();
-        if (membersSnapshot.empty) {
-            alert('Member is not active or not found');
-            return;
-        }
-        // Inside processCheckout function, after checking member is active:
-
-// Check borrowing limit
-const limitCheck = await checkBorrowingLimit(memberId);
-if (!limitCheck.allowed) {
-    alert(limitCheck.message);
-    return;
-}
-
-// Optional: Show warning if approaching limit
-if (limitCheck.remaining <= 1 && limitCheck.remaining > 0) {
-    showToast(`⚠️ Warning: This is the last book ${limitCheck.category} can borrow!`, 'warning');
-}
-        
-        // Create transaction
-        const transactionId = 'T' + Date.now().toString().slice(-6);
-        await db.collection('transactions').add({
-            transactionId, 
-            accessionNo, 
-            memberId, 
-            issueDate, 
-            dueDate, 
-            returnDate: null, 
-            status: 'Borrowed',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        // Update book - decrease available copies
-        const newAvailableCopies = bookData.availableCopies - 1;
-        const newStatus = newAvailableCopies > 0 ? 'Available' : 'Borrowed';
-        
-        await bookDoc.ref.update({ 
-            status: newStatus, 
-            availableCopies: newAvailableCopies 
-        });
-        
-        closeModal();
-        showToast(`Checkout successful! ${newAvailableCopies} copy/copies remaining. Transaction ID: ${transactionId}`, 'success');
-        loadCirculation();
-        loadCatalog(); // Refresh catalog to show updated available copies
-    } catch (error) { 
-        console.error('Checkout error:', error);
-        alert('Error: ' + error.message); 
-    }
-}
-        // ========== MEMBER BORROWING LIMITS ==========
-async function checkBorrowingLimit(memberId) {
-    try {
-        // Get member details
-        const memberSnapshot = await db.collection('members').where('memberId', '==', memberId).get();
-        if (memberSnapshot.empty) return { allowed: false, message: 'Member not found' };
-        
-        const member = memberSnapshot.docs[0].data();
-        const memberCategory = member.category;
-        
-        // Define borrowing limits by category
-        const limits = {
-            'Student': 3,
-            'Teaching Staff': 5,
-            'Non-Teaching Staff': 4,
-            'External Member': 2
-        };
-        
-        const maxBooks = limits[memberCategory] || 3;
-        
-        // Count current borrowed books
-        const borrowedSnapshot = await db.collection('transactions')
-            .where('memberId', '==', memberId)
-            .where('status', '==', 'Borrowed')
-            .get();
-        
-        const currentCount = borrowedSnapshot.size;
-        const remaining = maxBooks - currentCount;
-        
-        return {
-            allowed: currentCount < maxBooks,
-            current: currentCount,
-            max: maxBooks,
-            remaining: remaining,
-            category: memberCategory,
-            message: currentCount >= maxBooks ? 
-                `${memberCategory} can borrow maximum ${maxBooks} books. Currently has ${currentCount} borrowed.` : 
-                `${memberCategory} can borrow ${remaining} more book(s).`
-        };
-    } catch (error) {
-        console.error('Error checking limit:', error);
-        return { allowed: true, message: 'Limit check failed' };
-    }
-}
-       async function returnBook(transactionId, accessionNo) {
-    if (!confirm('Confirm book return?')) return;
-    try {
-        const returnDate = new Date();
-        
-        // Update transaction
-        const transactionRef = db.collection('transactions').doc(transactionId);
-        const transactionDoc = await transactionRef.get();
-        const transactionData = transactionDoc.data();
-        await transactionRef.update({ returnDate, status: 'Returned' });
-        
-        // Update book - increase available copies
-        const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
-        if (!booksSnapshot.empty) {
-            const bookDoc = booksSnapshot.docs[0];
-            const bookData = bookDoc.data();
-            const newAvailableCopies = (bookData.availableCopies || 0) + 1;
-            const newStatus = newAvailableCopies > 0 ? 'Available' : 'Borrowed';
+            event.preventDefault();
+            const accessionNo = document.getElementById('checkoutAccessionNo').value;
+            const memberId = document.getElementById('checkoutMemberId').value;
+            const issueDate = new Date(document.getElementById('issueDate').value);
+            const dueDate = new Date(issueDate);
+            dueDate.setDate(dueDate.getDate() + parseInt(document.getElementById('loanPeriod').value));
             
-            await bookDoc.ref.update({ 
-                status: newStatus, 
-                availableCopies: newAvailableCopies 
-            });
+            try {
+                const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
+                if (booksSnapshot.empty) { alert('Book not found'); return; }
+                const bookDoc = booksSnapshot.docs[0];
+                const bookData = bookDoc.data();
+                if (bookData.availableCopies <= 0) { alert('No copies available.'); return; }
+                
+                const membersSnapshot = await db.collection('members').where('memberId', '==', memberId).where('status', '==', 'Active').get();
+                if (membersSnapshot.empty) { alert('Member not active'); return; }
+                
+                const transactionId = 'T' + Date.now().toString().slice(-6);
+                await db.collection('transactions').add({
+                    transactionId, accessionNo, memberId, issueDate, dueDate, returnDate: null, status: 'Borrowed',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                const newAvailableCopies = bookData.availableCopies - 1;
+                await bookDoc.ref.update({ 
+                    status: newAvailableCopies > 0 ? 'Available' : 'Borrowed', 
+                    availableCopies: newAvailableCopies 
+                });
+                
+                closeModal();
+                showToast(`Checkout successful! Transaction ID: ${transactionId}`, 'success');
+                loadCirculation();
+                loadCatalog();
+            } catch (error) { 
+                console.error('Checkout error:', error);
+                alert('Error: ' + error.message); 
+            }
         }
-        
-        // Calculate fine if returned late
-        const dueDate = transactionData.dueDate.toDate();
-        if (returnDate > dueDate) {
-            const daysLate = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
-            const finePerDay = 500;
-            const totalFine = daysLate * finePerDay;
-            
-            await db.collection('fines').add({
-                transactionId: transactionData.transactionId, 
-                dueDate, 
-                returnDate, 
-                daysLate, 
-                finePerDay: finePerDay,
-                totalFine, 
-                status: 'Unpaid', 
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            showToast(`Book returned with fine of K${totalFine} (${daysLate} days late)`, 'warning');
-        } else {
-            showToast('Book returned successfully!', 'success');
+
+        async function returnBook(transactionId, accessionNo) {
+            if (!confirm('Confirm book return?')) return;
+            try {
+                const returnDate = new Date();
+                const transactionRef = db.collection('transactions').doc(transactionId);
+                const transactionDoc = await transactionRef.get();
+                const transactionData = transactionDoc.data();
+                await transactionRef.update({ returnDate, status: 'Returned' });
+                
+                const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
+                if (!booksSnapshot.empty) {
+                    const bookDoc = booksSnapshot.docs[0];
+                    const bookData = bookDoc.data();
+                    const newAvailableCopies = (bookData.availableCopies || 0) + 1;
+                    await bookDoc.ref.update({ 
+                        status: newAvailableCopies > 0 ? 'Available' : 'Borrowed', 
+                        availableCopies: newAvailableCopies 
+                    });
+                }
+                
+                const dueDate = transactionData.dueDate.toDate();
+                if (returnDate > dueDate) {
+                    const daysLate = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
+                    const totalFine = daysLate * 500;
+                    await db.collection('fines').add({
+                        transactionId: transactionData.transactionId, dueDate, returnDate, daysLate, finePerDay: 500,
+                        totalFine, status: 'Unpaid', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast(`Book returned with fine of K${totalFine} (${daysLate} days late)`, 'warning');
+                } else {
+                    showToast('Book returned successfully!', 'success');
+                }
+                loadCirculation();
+                loadCatalog();
+            } catch (error) { 
+                console.error('Return error:', error);
+                alert('Error: ' + error.message); 
+            }
         }
-        
-        loadCirculation();
-        loadCatalog(); // Refresh catalog to show updated available copies
-    } catch (error) { 
-        console.error('Return error:', error);
-        alert('Error: ' + error.message); 
-    }
-}
+
         async function payFine(fineId) {
             if (!confirm('Mark this fine as paid?')) return;
             try {
@@ -1470,145 +1445,58 @@ async function checkBorrowingLimit(memberId) {
         }
 
         async function deleteBook(bookId) {
-            if (!confirm('Delete this book?')) return;
-            try { await db.collection('books').doc(bookId).delete(); loadCatalog(); showToast('Book deleted', 'success'); } 
-            catch (error) { alert('Error: ' + error.message); }
+            window.deleteBook(bookId);
         }
-        // ========== EDIT BOOK FUNCTION ==========
-async function editBook(bookId) {
-    try {
-        // Fetch current book data
-        const bookDoc = await db.collection('books').doc(bookId).get();
-        const book = bookDoc.data();
-        
-        if (!book) {
-            alert('Book not found');
-            return;
-        }
-        
-        // Create edit modal
-        const modal = document.getElementById('modal');
-        const modalContent = document.getElementById('modalContent');
-        
-        modalContent.innerHTML = `
-            <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Edit Book</h3>
-                <span class="close" onclick="closeModal()">&times;</span>
-            </div>
-            <form onsubmit="updateBook(event, '${bookId}')">
-                <div class="form-group">
-                    <label>Accession Number *</label>
-                    <input type="text" id="editAccessionNo" value="${book.accessionNo || ''}" required placeholder="e.g., A001">
-                </div>
-                <div class="form-group">
-                    <label>Title *</label>
-                    <input type="text" id="editTitle" value="${book.title || ''}" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Author *</label>
-                        <input type="text" id="editAuthor" value="${book.author || ''}" required>
-                    </div>
-                    <div class="form-group">
-                        <label>ISBN</label>
-                        <input type="text" id="editIsbn" value="${book.isbn || ''}">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Subject</label>
-                        <input type="text" id="editSubject" value="${book.subject || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>DDC Number *</label>
-                        <select id="editDdcNumber" required>
-                            <option value="">Select DDC Class</option>
-                            ${ddcMainClasses.map(d => `
-                                <option value="${d.number}" ${book.ddcNumber === d.number ? 'selected' : ''}>
-                                    ${d.number} - ${d.name}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Year</label>
-                        <input type="number" id="editYear" value="${book.year || ''}" min="1900" max="2026">
-                    </div>
-                    <div class="form-group">
-                        <label>Total Copies</label>
-                        <input type="number" id="editTotalCopies" value="${book.totalCopies || 1}" min="1" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Available Copies</label>
-                    <input type="number" id="editAvailableCopies" value="${book.availableCopies || book.totalCopies || 1}" min="0" required>
-                    <small style="color: #6c757d;">Note: Available copies cannot exceed total copies</small>
-                </div>
-                <div class="form-row">
-                    <button type="submit" class="btn btn-success" style="width: 48%;">
-                        <i class="fas fa-save"></i> Update Book
-                    </button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal()" style="width: 48%;">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                </div>
-            </form>
-        `;
-        
-        modal.style.display = 'block';
-        
-    } catch (error) {
-        console.error('Error loading book for edit:', error);
-        alert('Error loading book data');
-    }
-}
-
-// ========== UPDATE BOOK FUNCTION ==========
-async function updateBook(event, bookId) {
-    event.preventDefault();
-    
-    const totalCopies = parseInt(document.getElementById('editTotalCopies').value);
-    const availableCopies = parseInt(document.getElementById('editAvailableCopies').value);
-    
-    // Validate available copies
-    if (availableCopies > totalCopies) {
-        alert('Available copies cannot exceed total copies');
-        return;
-    }
-    
-    const status = availableCopies > 0 ? 'Available' : 'Borrowed';
-    
-    const updatedBook = {
-        accessionNo: document.getElementById('editAccessionNo').value,
-        title: document.getElementById('editTitle').value,
-        author: document.getElementById('editAuthor').value,
-        isbn: document.getElementById('editIsbn').value || '',
-        subject: document.getElementById('editSubject').value || '',
-        ddcNumber: document.getElementById('editDdcNumber').value,
-        year: parseInt(document.getElementById('editYear').value) || null,
-        totalCopies: totalCopies,
-        availableCopies: availableCopies,
-        status: status,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    
-    try {
-        await db.collection('books').doc(bookId).update(updatedBook);
-        closeModal();
-        loadCatalog();
-        showToast('Book updated successfully!', 'success');
-    } catch (error) {
-        console.error('Error updating book:', error);
-        alert('Error updating book: ' + error.message);
-    }
-}
 
         async function deleteMember(memberId) {
-            if (!confirm('Delete this member?')) return;
-            try { await db.collection('members').doc(memberId).delete(); loadMembers(); showToast('Member deleted', 'success'); } 
-            catch (error) { alert('Error: ' + error.message); }
+            window.deleteMember(memberId);
+        }
+
+        async function editBook(bookId) {
+            try {
+                const bookDoc = await db.collection('books').doc(bookId).get();
+                const book = bookDoc.data();
+                if (!book) { alert('Book not found'); return; }
+                
+                const modal = document.getElementById('modal');
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = `
+                    <div class="modal-header"><h3><i class="fas fa-edit"></i> Edit Book</h3><span class="close" onclick="closeModal()">&times;</span></div>
+                    <form onsubmit="updateBook(event, '${bookId}')">
+                        <div class="form-group"><label>Accession Number *</label><input type="text" id="editAccessionNo" value="${book.accessionNo || ''}" required></div>
+                        <div class="form-group"><label>Title *</label><input type="text" id="editTitle" value="${book.title || ''}" required></div>
+                        <div class="form-row"><div class="form-group"><label>Author *</label><input type="text" id="editAuthor" value="${book.author || ''}" required></div><div class="form-group"><label>ISBN</label><input type="text" id="editIsbn" value="${book.isbn || ''}"></div></div>
+                        <div class="form-row"><div class="form-group"><label>Subject</label><input type="text" id="editSubject" value="${book.subject || ''}"></div><div class="form-group"><label>DDC Number *</label><select id="editDdcNumber" required>${ddcMainClasses.map(d => `<option value="${d.number}" ${book.ddcNumber === d.number ? 'selected' : ''}>${d.number} - ${d.name}</option>`).join('')}</select></div></div>
+                        <div class="form-row"><div class="form-group"><label>Year</label><input type="number" id="editYear" value="${book.year || ''}" min="1900" max="2026"></div><div class="form-group"><label>Total Copies</label><input type="number" id="editTotalCopies" value="${book.totalCopies || 1}" min="1" required></div></div>
+                        <div class="form-group"><label>Available Copies</label><input type="number" id="editAvailableCopies" value="${book.availableCopies || book.totalCopies || 1}" min="0" required><small>Available copies cannot exceed total copies</small></div>
+                        <div class="form-row"><button type="submit" class="btn btn-success" style="width:48%"><i class="fas fa-save"></i> Update Book</button><button type="button" class="btn btn-danger" onclick="closeModal()" style="width:48%">Cancel</button></div>
+                    </form>`;
+                modal.style.display = 'block';
+            } catch (error) { alert('Error loading book data'); }
+        }
+
+        async function updateBook(event, bookId) {
+            event.preventDefault();
+            const totalCopies = parseInt(document.getElementById('editTotalCopies').value);
+            const availableCopies = parseInt(document.getElementById('editAvailableCopies').value);
+            if (availableCopies > totalCopies) { alert('Available copies cannot exceed total copies'); return; }
+            
+            await db.collection('books').doc(bookId).update({
+                accessionNo: document.getElementById('editAccessionNo').value,
+                title: document.getElementById('editTitle').value,
+                author: document.getElementById('editAuthor').value,
+                isbn: document.getElementById('editIsbn').value || '',
+                subject: document.getElementById('editSubject').value || '',
+                ddcNumber: document.getElementById('editDdcNumber').value,
+                year: parseInt(document.getElementById('editYear').value) || null,
+                totalCopies: totalCopies,
+                availableCopies: availableCopies,
+                status: availableCopies > 0 ? 'Available' : 'Borrowed',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            closeModal();
+            loadCatalog();
+            showToast('Book updated successfully!', 'success');
         }
 
         // ========== SEARCH FUNCTIONS ==========
@@ -1627,13 +1515,7 @@ async function updateBook(event, bookId) {
         function searchCirculation() {
             const term = document.getElementById('circulationSearch')?.value.toLowerCase() || '';
             const rows = document.querySelectorAll('#circulationTableBody tr');
-            rows.forEach(row => {
-                if (row.textContent.toLowerCase().includes(term)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+            rows.forEach(row => row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none');
         }
 
         function filterByDDC(ddc) {
@@ -1734,462 +1616,5 @@ async function updateBook(event, bookId) {
             });
         })();
     </script>
-    // ========== ROLE-BASED UI CONTROL ==========
-let currentUserRole = null;
-
-// Get current user role
-async function loadUserRoleForDashboard() {
-    const user = getCurrentUser();
-    if (user) {
-        // Wait a bit for auth.js to load role
-        await new Promise(resolve => setTimeout(resolve, 500));
-        currentUserRole = getCurrentUserRole();
-        
-        // Update UI based on role
-        updateDashboardUIForRole();
-        
-        // Add admin link if admin
-        if (isAdmin()) {
-            addAdminLinkToSidebar();
-        }
-        
-        // Display user role in top bar
-        displayUserRole();
-    }
-}
-
-// Update dashboard UI based on role
-function updateDashboardUIForRole() {
-    // Find all action buttons
-    const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
-    const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
-    const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
-    
-    if (isStaff()) {
-        // Staff: Hide all action buttons
-        if (addBookBtn) addBookBtn.style.display = 'none';
-        if (addMemberBtn) addMemberBtn.style.display = 'none';
-        if (checkoutBtn) checkoutBtn.style.display = 'none';
-        
-        // Hide delete buttons in catalog
-        hideDeleteButtons();
-        
-        // Disable return buttons in circulation
-        disableReturnButtons();
-        
-        showToast('You are in read-only mode (Staff)', 'info');
-    } else if (isLibrarian()) {
-        // Librarian: Show action buttons, hide delete buttons
-        if (addBookBtn) addBookBtn.style.display = 'inline-flex';
-        if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
-        if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
-        
-        // Hide delete buttons
-        hideDeleteButtons();
-        
-        showToast('Librarian mode - You can manage books, members, and circulation', 'info');
-    } else if (isAdmin()) {
-        // Admin: Show everything
-        showToast('Admin mode - Full access', 'success');
-    }
-}
-
-// Hide all delete buttons in catalog and members
-function hideDeleteButtons() {
-    const deleteButtons = document.querySelectorAll('.btn-danger');
-    deleteButtons.forEach(btn => {
-        if (btn.textContent.includes('Delete') || btn.onclick?.toString().includes('delete')) {
-            btn.style.display = 'none';
-        }
-    });
-}
-
-// Disable return buttons for staff
-function disableReturnButtons() {
-    const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
-    returnButtons.forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.title = 'Staff cannot process returns';
-    });
-}
-
-// Add admin link to sidebar
-function addAdminLinkToSidebar() {
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav && !document.querySelector('.admin-nav-link')) {
-        const adminLink = document.createElement('div');
-        adminLink.className = 'nav-item admin-nav-link';
-        adminLink.setAttribute('data-view', 'admin');
-        adminLink.innerHTML = `
-            <i class="fas fa-user-shield"></i>
-            <span>User Management</span>
-        `;
-        adminLink.onclick = () => {
-            window.location.href = 'admin.html';
-        };
-        sidebarNav.appendChild(adminLink);
-    }
-}
-
-// Display user role in top bar
-function displayUserRole() {
-    const userInfo = document.querySelector('.user-info');
-    if (userInfo && !document.querySelector('.user-role-badge')) {
-        const roleBadge = document.createElement('span');
-        roleBadge.className = 'user-role-badge';
-        let roleText = '';
-        let roleColor = '';
-        
-        if (isAdmin()) {
-            roleText = 'Admin';
-            roleColor = '#e74c3c';
-        } else if (isLibrarian()) {
-            roleText = 'Librarian';
-            roleColor = '#27ae60';
-        } else {
-            roleText = 'Staff';
-            roleColor = '#3498db';
-        }
-        
-        roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
-        userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
-    }
-}
-
-// Override delete functions to check permissions
-const originalDeleteBook = window.deleteBook;
-window.deleteBook = async function(bookId) {
-    if (!canDeleteData()) {
-        showToast('Permission denied: Only admins can delete books', 'error');
-        return;
-    }
-    if (confirm('Delete this book?')) {
-        await originalDeleteBook(bookId);
-    }
-};
-
-const originalDeleteMember = window.deleteMember;
-window.deleteMember = async function(memberId) {
-    if (!canDeleteData()) {
-        showToast('Permission denied: Only admins can delete members', 'error');
-        return;
-    }
-    if (confirm('Delete this member?')) {
-        await originalDeleteMember(memberId);
-    }
-};
-
-// Override showAddBookForm for role check
-const originalShowAddBookForm = window.showAddBookForm;
-window.showAddBookForm = function() {
-    if (!canEditBooks()) {
-        showToast('Permission denied: Only admins and librarians can add books', 'error');
-        return;
-    }
-    originalShowAddBookForm();
-};
-
-// Override showAddMemberForm for role check
-const originalShowAddMemberForm = window.showAddMemberForm;
-window.showAddMemberForm = function() {
-    if (!canEditMembers()) {
-        showToast('Permission denied: Only admins and librarians can add members', 'error');
-        return;
-    }
-    originalShowAddMemberForm();
-};
-
-// Override showCheckoutForm for role check
-const originalShowCheckoutForm = window.showCheckoutForm;
-window.showCheckoutForm = function() {
-    if (!canManageCirculation()) {
-        showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
-        return;
-    }
-    originalShowCheckoutForm();
-};
-
-// Call on page load
-setTimeout(loadUserRoleForDashboard, 1000);
-    <script>
-// ========== ROLE-BASED UI CONTROL ==========
-let currentUserRole = null;
-
-// Get current user role (fallback function)
-function getCurrentUserRoleFallback() {
-    // Check if function exists in auth.js
-    if (typeof window.getCurrentUserRole === 'function') {
-        return window.getCurrentUserRole();
-    }
-    // Fallback: try to get from localStorage or check email
-    const userEmail = localStorage.getItem('userEmail');
-    if (userEmail === 'macmillanisaac08@gmail.com' || userEmail === 'admin@library.com') {
-        return 'admin';
-    }
-    return 'staff';
-}
-
-// Check if user is admin
-function isAdminCheck() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'admin';
-}
-
-// Check if user is librarian
-function isLibrarianCheck() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'librarian';
-}
-
-// Check if user is staff
-function isStaffCheck() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'staff' || role === null;
-}
-
-// Permission checks
-function canEditBooks() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'admin' || role === 'librarian';
-}
-
-function canEditMembers() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'admin' || role === 'librarian';
-}
-
-function canManageCirculation() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'admin' || role === 'librarian';
-}
-
-function canDeleteData() {
-    const role = getCurrentUserRoleFallback();
-    return role === 'admin';
-}
-
-// Load user role
-async function loadUserRoleForDashboard() {
-    const user = firebase.auth().currentUser;
-    if (user) {
-        // Try to get role from Firestore
-        try {
-            const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-                currentUserRole = userDoc.data().role;
-                // Store in localStorage for quick access
-                localStorage.setItem('userRole', currentUserRole);
-            } else {
-                // First user becomes admin
-                const usersSnapshot = await firebase.firestore().collection('users').limit(1).get();
-                if (usersSnapshot.empty) {
-                    currentUserRole = 'admin';
-                    await firebase.firestore().collection('users').doc(user.uid).set({
-                        email: user.email,
-                        name: user.email.split('@')[0],
-                        role: 'admin',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } else {
-                    currentUserRole = 'staff';
-                }
-                localStorage.setItem('userRole', currentUserRole);
-            }
-        } catch (error) {
-            console.error('Error loading role:', error);
-            currentUserRole = localStorage.getItem('userRole') || 'staff';
-        }
-        
-        // Update UI based on role
-        updateDashboardUIForRole();
-        
-        // Add admin link if admin
-        if (currentUserRole === 'admin') {
-            addAdminLinkToSidebar();
-        }
-        
-        // Display user role in top bar
-        displayUserRole();
-    }
-}
-
-// Update dashboard UI based on role
-function updateDashboardUIForRole() {
-    // Find all action buttons
-    const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
-    const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
-    const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
-    
-    if (currentUserRole === 'staff') {
-        // Staff: Hide all action buttons
-        if (addBookBtn) addBookBtn.style.display = 'none';
-        if (addMemberBtn) addMemberBtn.style.display = 'none';
-        if (checkoutBtn) checkoutBtn.style.display = 'none';
-        
-        // Hide delete buttons in catalog
-        hideDeleteButtons();
-        
-        // Disable return buttons in circulation
-        disableReturnButtons();
-        
-        showToast('You are in read-only mode (Staff)', 'info');
-    } else if (currentUserRole === 'librarian') {
-        // Librarian: Show action buttons, hide delete buttons
-        if (addBookBtn) addBookBtn.style.display = 'inline-flex';
-        if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
-        if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
-        
-        // Hide delete buttons
-        hideDeleteButtons();
-        
-        showToast('Librarian mode - You can manage books, members, and circulation', 'info');
-    } else if (currentUserRole === 'admin') {
-        // Admin: Show everything
-        showToast('Admin mode - Full access', 'success');
-    }
-}
-
-// Hide all delete buttons in catalog and members
-function hideDeleteButtons() {
-    // Hide delete buttons in catalog
-    const catalogDeleteBtns = document.querySelectorAll('#catalogTableBody .btn-danger');
-    catalogDeleteBtns.forEach(btn => btn.style.display = 'none');
-    
-    // Hide delete buttons in members
-    const memberDeleteBtns = document.querySelectorAll('#membersTableBody .btn-danger');
-    memberDeleteBtns.forEach(btn => btn.style.display = 'none');
-}
-
-// Disable return buttons for staff
-function disableReturnButtons() {
-    const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
-    returnButtons.forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.title = 'Staff cannot process returns';
-    });
-}
-
-// Add admin link to sidebar
-function addAdminLinkToSidebar() {
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav && !document.querySelector('.admin-nav-link')) {
-        const adminLink = document.createElement('div');
-        adminLink.className = 'nav-item admin-nav-link';
-        adminLink.setAttribute('data-view', 'admin');
-        adminLink.innerHTML = `
-            <i class="fas fa-user-shield"></i>
-            <span>User Management</span>
-        `;
-        adminLink.onclick = () => {
-            window.location.href = 'admin.html';
-        };
-        sidebarNav.appendChild(adminLink);
-    }
-}
-
-// Display user role in top bar
-function displayUserRole() {
-    const userInfo = document.querySelector('.user-info');
-    if (userInfo && !document.querySelector('.user-role-badge')) {
-        const roleBadge = document.createElement('span');
-        roleBadge.className = 'user-role-badge';
-        let roleText = '';
-        let roleColor = '';
-        
-        if (currentUserRole === 'admin') {
-            roleText = 'Admin';
-            roleColor = '#e74c3c';
-        } else if (currentUserRole === 'librarian') {
-            roleText = 'Librarian';
-            roleColor = '#27ae60';
-        } else {
-            roleText = 'Staff';
-            roleColor = '#3498db';
-        }
-        
-        roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
-        userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
-    }
-}
-
-// Show toast message
-function showToast(message, type) {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-// Override delete functions
-const originalDeleteBook = window.deleteBook;
-if (originalDeleteBook) {
-    window.deleteBook = async function(bookId) {
-        if (currentUserRole !== 'admin') {
-            showToast('Permission denied: Only admins can delete books', 'error');
-            return;
-        }
-        if (confirm('Delete this book?')) {
-            await originalDeleteBook(bookId);
-        }
-    };
-}
-
-const originalDeleteMember = window.deleteMember;
-if (originalDeleteMember) {
-    window.deleteMember = async function(memberId) {
-        if (currentUserRole !== 'admin') {
-            showToast('Permission denied: Only admins can delete members', 'error');
-            return;
-        }
-        if (confirm('Delete this member?')) {
-            await originalDeleteMember(memberId);
-        }
-    };
-}
-
-// Override showAddBookForm
-const originalShowAddBookForm = window.showAddBookForm;
-if (originalShowAddBookForm) {
-    window.showAddBookForm = function() {
-        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
-            showToast('Permission denied: Only admins and librarians can add books', 'error');
-            return;
-        }
-        originalShowAddBookForm();
-    };
-}
-
-// Override showAddMemberForm
-const originalShowAddMemberForm = window.showAddMemberForm;
-if (originalShowAddMemberForm) {
-    window.showAddMemberForm = function() {
-        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
-            showToast('Permission denied: Only admins and librarians can add members', 'error');
-            return;
-        }
-        originalShowAddMemberForm();
-    };
-}
-
-// Override showCheckoutForm
-const originalShowCheckoutForm = window.showCheckoutForm;
-if (originalShowCheckoutForm) {
-    window.showCheckoutForm = function() {
-        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
-            showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
-            return;
-        }
-        originalShowCheckoutForm();
-    };
-}
-
-// Call on page load
-setTimeout(loadUserRoleForDashboard, 1500);
-</script>
 </body>
 </html>
