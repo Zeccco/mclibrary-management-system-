@@ -924,52 +924,102 @@ async function loadDashboard() {
 }
 
         // ========== CATALOG ==========
-        async function loadCatalog() {
-            const contentArea = document.getElementById('contentArea');
-            contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading catalog...</p></div>';
-            
-            try {
-                const booksSnapshot = await db.collection('books').orderBy('accessionNo').get();
-                let booksHtml = '';
-                booksSnapshot.forEach(doc => {
-                    const b = doc.data();
-                    booksHtml += `
-                        <tr>
-                            <td>${b.accessionNo || 'N/A'}</td>
-                            <td><strong>${b.title || 'N/A'}</strong></td>
-                            <td>${b.author || 'N/A'}</td>
-                            <td>${b.isbn || '-'}</td>
-                            <td>${b.subject || '-'}</td>
-                            <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
-                            <td>${b.year || '-'}</td>
-                            <td>${b.totalCopies || 0}</td>
-                            <td>${b.availableCopies || 0}</td>
-                            <td><span class="badge badge-${b.status === 'Available' ? 'available' : 'borrowed'}">${b.status || 'Available'}</span></td>
-                            <td><button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')"><i class="fas fa-trash"></i> Delete</button></td>
-                        </tr>
-                    `;
-                });
-
-                const html = `
-                    <div class="form-container">
-                        <div class="section-header"><h2><i class="fas fa-books"></i> DDC Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add New Book</button></div>
-                        <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN..."><button class="btn btn-primary" onclick="searchCatalog()"><i class="fas fa-search"></i> Search</button></div>
-                        <div class="ddc-nav">${ddcMainClasses.map(ddc => `<div class="ddc-class" onclick="filterByDDC('${ddc.number}')"><strong>${ddc.number}</strong><br><small>${ddc.name}</small></div>`).join('')}</div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr>
-                                </thead>
-                                <tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11" style="text-align:center">No books. Click "Add New Book" to get started!</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-                contentArea.innerHTML = html;
-            } catch (error) {
-                contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>';
-            }
+     // ========== CATALOG ==========
+async function loadCatalog() {
+    const contentArea = document.getElementById('contentArea');
+    contentArea.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="spinner"></div><p>Loading catalog...</p></div>';
+    
+    try {
+        const booksSnapshot = await db.collection('books').orderBy('accessionNo').get();
+        let booksHtml = '';
+        
+        if (booksSnapshot.empty) {
+            booksHtml = '<tr><td colspan="11" style="text-align:center">No books. Click "Add New Book" to get started!</td></tr>';
+        } else {
+            booksSnapshot.forEach(doc => {
+                const b = doc.data();
+                const total = b.totalCopies || 0;
+                const available = b.availableCopies || 0;
+                const borrowed = total - available;
+                const status = available > 0 ? 'Available' : 'Borrowed';
+                const statusClass = available > 0 ? 'available' : 'borrowed';
+                
+                booksHtml += `
+                    <tr>
+                        <td><strong>${b.accessionNo || 'N/A'}</strong></td>
+                        <td>${b.title || 'N/A'}</td>
+                        <td>${b.author || 'N/A'}</td>
+                        <td>${b.isbn || '-'}</td>
+                        <td>${b.subject || '-'}</td>
+                        <td><span class="badge badge-info">${b.ddcNumber || '-'}</span></td>
+                        <td>${b.year || '-'}</td>
+                        <td style="text-align: center;"><strong>${total}</strong></td>
+                        <td style="text-align: center;">
+                            <span style="color: ${available > 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${available}</span> / ${total}
+                            ${borrowed > 0 ? `<small> (${borrowed} borrowed)</small>` : ''}
+                        </td>
+                        <td><span class="badge badge-${statusClass}">${status}</span></td>
+                        <td>
+                            <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
+        const html = `
+            <div class="form-container">
+                <div class="section-header">
+                    <h2><i class="fas fa-books"></i> DDC Catalog</h2>
+                    <button class="btn btn-success" onclick="showAddBookForm()">
+                        <i class="fas fa-plus"></i> Add New Book
+                    </button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number...">
+                    <button class="btn btn-primary" onclick="searchCatalog()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                <div class="ddc-nav">
+                    ${ddcMainClasses.map(ddc => `
+                        <div class="ddc-class" onclick="filterByDDC('${ddc.number}')">
+                            <strong>${ddc.number}</strong><br>
+                            <small>${ddc.name}</small>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Accession</th>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                <th>Subject</th>
+                                <th>DDC</th>
+                                <th>Year</th>
+                                <th>Total</th>
+                                <th>Available</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="catalogTableBody">
+                            ${booksHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        contentArea.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading catalog:', error);
+        contentArea.innerHTML = '<div style="text-align:center;padding:50px;color:red;">Error loading catalog</div>';
+    }
+}
         // ========== MEMBERS ==========
         async function loadMembers() {
             const contentArea = document.getElementById('contentArea');
