@@ -1255,37 +1255,60 @@
         alert('Error: ' + error.message); 
     }
 }
-        async function returnBook(transactionId, accessionNo) {
-            if (!confirm('Confirm book return?')) return;
-            try {
-                const returnDate = new Date();
-                const transactionRef = db.collection('transactions').doc(transactionId);
-                const transactionDoc = await transactionRef.get();
-                const transactionData = transactionDoc.data();
-                await transactionRef.update({ returnDate, status: 'Returned' });
-                
-                const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
-                if (!booksSnapshot.empty) {
-                    const bookDoc = booksSnapshot.docs[0];
-                    await bookDoc.ref.update({ status: 'Available', availableCopies: (bookDoc.data().availableCopies || 0) + 1 });
-                }
-                
-                const dueDate = transactionData.dueDate.toDate();
-                if (returnDate > dueDate) {
-                    const daysLate = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
-                    const totalFine = daysLate * 500;
-                    await db.collection('fines').add({
-                        transactionId: transactionData.transactionId, dueDate, returnDate, daysLate, finePerDay: 500,
-                        totalFine, status: 'Unpaid', createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    showToast(`Book returned with fine of K${totalFine} (${daysLate} days late)`, 'warning');
-                } else {
-                    showToast('Book returned successfully!', 'success');
-                }
-                loadCirculation();
-            } catch (error) { alert('Error: ' + error.message); }
+       async function returnBook(transactionId, accessionNo) {
+    if (!confirm('Confirm book return?')) return;
+    try {
+        const returnDate = new Date();
+        
+        // Update transaction
+        const transactionRef = db.collection('transactions').doc(transactionId);
+        const transactionDoc = await transactionRef.get();
+        const transactionData = transactionDoc.data();
+        await transactionRef.update({ returnDate, status: 'Returned' });
+        
+        // Update book - increase available copies
+        const booksSnapshot = await db.collection('books').where('accessionNo', '==', accessionNo).get();
+        if (!booksSnapshot.empty) {
+            const bookDoc = booksSnapshot.docs[0];
+            const bookData = bookDoc.data();
+            const newAvailableCopies = (bookData.availableCopies || 0) + 1;
+            const newStatus = newAvailableCopies > 0 ? 'Available' : 'Borrowed';
+            
+            await bookDoc.ref.update({ 
+                status: newStatus, 
+                availableCopies: newAvailableCopies 
+            });
         }
-
+        
+        // Calculate fine if returned late
+        const dueDate = transactionData.dueDate.toDate();
+        if (returnDate > dueDate) {
+            const daysLate = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
+            const finePerDay = 500;
+            const totalFine = daysLate * finePerDay;
+            
+            await db.collection('fines').add({
+                transactionId: transactionData.transactionId, 
+                dueDate, 
+                returnDate, 
+                daysLate, 
+                finePerDay: finePerDay,
+                totalFine, 
+                status: 'Unpaid', 
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showToast(`Book returned with fine of K${totalFine} (${daysLate} days late)`, 'warning');
+        } else {
+            showToast('Book returned successfully!', 'success');
+        }
+        
+        loadCirculation();
+        loadCatalog(); // Refresh catalog to show updated available copies
+    } catch (error) { 
+        console.error('Return error:', error);
+        alert('Error: ' + error.message); 
+    }
+}
         async function payFine(fineId) {
             if (!confirm('Mark this fine as paid?')) return;
             try {
