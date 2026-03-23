@@ -160,7 +160,7 @@
                 <div class="nav-item" data-view="members"><i class="fas fa-users"></i><span>Members</span></div>
                 <div class="nav-item" data-view="circulation"><i class="fas fa-exchange-alt"></i><span>Circulation</span></div>
                 <div class="nav-item" data-view="fines"><i class="fas fa-money-bill"></i><span>Fines</span></div>
-                <div class="nav-item" data-view="ddcClasses"><i class="fas fa-sitemap"></i><span>Classes</span></div>
+                <div class="nav-item" data-view="ddcClasses"><i class="fas fa-sitemap"></i><span>DDC Classes</span></div>
             </nav>
         </aside>
         
@@ -199,16 +199,16 @@
         let currentUserName = '';
 
         const ddcMainClasses = [
-            { number: '000', name: 'General Works' },
-            { number: '100', name: 'Philosophy & Psychology' },
-            { number: '200', name: 'Religion' },
-            { number: '300', name: 'Social Sciences' },
-            { number: '400', name: 'Language' },
-            { number: '500', name: 'Natural Sciences & Mathematics' },
-            { number: '600', name: 'Technology' },
-            { number: '700', name: 'Arts & Recreation' },
-            { number: '800', name: 'Literature' },
-            { number: '900', name: 'History & Geography' }
+            { number: '000', name: 'General Works', description: 'Computers, Information, Libraries, Journalism' },
+            { number: '100', name: 'Philosophy & Psychology', description: 'Ethics, Psychology, Logic, Metaphysics' },
+            { number: '200', name: 'Religion', description: 'Bible, Theology, Mythology, Islam, Buddhism' },
+            { number: '300', name: 'Social Sciences', description: 'Economics, Law, Education, Politics, Sociology' },
+            { number: '400', name: 'Language', description: 'English, Spanish, French, Latin, Linguistics' },
+            { number: '500', name: 'Natural Sciences', description: 'Mathematics, Physics, Chemistry, Biology, Astronomy' },
+            { number: '600', name: 'Technology', description: 'Medicine, Engineering, Agriculture, Business' },
+            { number: '700', name: 'Arts & Recreation', description: 'Art, Music, Sports, Photography, Architecture' },
+            { number: '800', name: 'Literature', description: 'Poetry, Drama, Fiction, Essays, Speeches' },
+            { number: '900', name: 'History & Geography', description: 'Travel, Biography, Ancient History, World History' }
         ];
 
         async function loadUserRole() {
@@ -435,15 +435,15 @@
                     const t = doc.data();
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                     html += `<tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                        <td>${t.transactionId}</td>
-                        <td>${t.accessionNo}</td>
-                        <td>${t.memberId}</td>
-                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}</td>
-                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}</td>
-                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  on
-                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  on
-                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  on
-                      </tr>`;
+                        <td>${t.transactionId} on
+                        <td>${t.accessionNo} on
+                        <td>${t.memberId} on
+                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} on
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} on
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} on
+                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> on
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} on
+                       </tr>`;
                 });
                 html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
@@ -465,7 +465,7 @@
             });
         }
 
-        // ========== FINES - Fixed Display ==========
+        // ========== FINES ==========
         async function loadFines() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading fines...</p>';
@@ -475,7 +475,7 @@
                 let finesHtml = '';
                 
                 if (fines.empty) {
-                    finesHtml = '<tr><td colspan="7" style="text-align:center">No fines recorded</td></tr>';
+                    finesHtml = '<tr><td colspan="8" style="text-align:center">No fines recorded</td></tr>';
                 } else {
                     fines.forEach(doc => {
                         const f = doc.data();
@@ -542,7 +542,44 @@
 
         // ========== DDC CLASSES ==========
         function loadDDCClasses() {
-            const html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-sitemap"></i> DDC Classes</h2></div><div class="table-container">   <thead>  <tr><th>Class</th><th>Name</th><th>Description</th></tr> </thead><tbody>${ddcMainClasses.map(d => `<tr><td><strong>${d.number}</strong></td><td>${d.name}</td><td>Books about ${d.name.toLowerCase()}</td></tr>`).join('')}</tbody> </div><div style="margin-top:20px;padding:20px;background:#f8f9fa;border-radius:10px;"><p>The Dewey Decimal Classification organizes knowledge into ten main classes.</p></div></div>`;
+            let classesHtml = '';
+            ddcMainClasses.forEach(ddc => {
+                classesHtml += `
+                    <tr>
+                        <td><strong>${ddc.number}</strong></td>
+                        <td>${ddc.name}</td>
+                        <td>${ddc.description}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div class="form-container">
+                    <div class="section-header">
+                        <h2><i class="fas fa-sitemap"></i> Dewey Decimal Classification (DDC)</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Class Number</th>
+                                    <th>Class Name</th>
+                                    <th>Description / Example Subjects</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${classesHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:20px; padding:20px; background:#f8f9fa; border-radius:10px;">
+                        <h4><i class="fas fa-info-circle"></i> About the DDC System</h4>
+                        <p>The Dewey Decimal Classification (DDC) is a library classification system created by Melvil Dewey in 1876. It organizes knowledge into ten main classes, each represented by a three-digit number. The system is used in over 200,000 libraries in 135 countries.</p>
+                        <br>
+                        <p><strong>How to use:</strong> When adding a new book, select the appropriate DDC class number based on the book's subject. This helps organize books by topic and makes them easier to find on the shelves.</p>
+                    </div>
+                </div>
+            `;
             document.getElementById('contentArea').innerHTML = html;
         }
 
