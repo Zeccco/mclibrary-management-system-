@@ -15,11 +15,8 @@
         .user-info h3 { margin-bottom: 5px; color: #2c3e50; }
         .user-info p { color: #666; font-size: 0.85rem; }
         .user-role { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; }
-        .role-head_librarian { background: #8e44ad; color: white; }
-        .role-senior_librarian { background: #e74c3c; color: white; }
+        .role-admin { background: #e74c3c; color: white; }
         .role-librarian { background: #27ae60; color: white; }
-        .role-assistant { background: #3498db; color: white; }
-        .role-circulation { background: #f39c12; color: white; }
         .user-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .role-select { padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd; background: white; cursor: pointer; }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; }
@@ -63,11 +60,8 @@
                 <div class="form-group"><label>Password *</label><input type="password" id="staffPassword" required placeholder="At least 6 characters"></div>
                 <div class="form-group"><label>Role *</label>
                     <select id="staffRole">
-                        <option value="circulation">Circulation Desk (Checkouts, Returns, Fines only)</option>
-                        <option value="assistant">Library Assistant (Can add/edit books/members)</option>
-                        <option value="librarian">Librarian (Full management, no delete)</option>
-                        <option value="senior_librarian">Senior Librarian (Full access with delete)</option>
-                        <option value="head_librarian">Head Librarian (Admin access)</option>
+                        <option value="librarian">Librarian (Full access - can manage everything)</option>
+                        <option value="admin">Admin (Full access + User Management)</option>
                     </select>
                 </div>
                 <div class="form-row"><button type="submit" class="btn btn-success">Create Account</button><button type="button" class="btn btn-danger" onclick="closeCreateModal()">Cancel</button></div>
@@ -88,16 +82,16 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        const roleNames = { 'head_librarian': 'Head Librarian', 'senior_librarian': 'Senior Librarian', 'librarian': 'Librarian', 'assistant': 'Assistant', 'circulation': 'Circulation' };
-        const roleClass = { 'head_librarian': 'role-head_librarian', 'senior_librarian': 'role-senior_librarian', 'librarian': 'role-librarian', 'assistant': 'role-assistant', 'circulation': 'role-circulation' };
+        const roleNames = { 'admin': 'Admin', 'librarian': 'Librarian' };
+        const roleClass = { 'admin': 'role-admin', 'librarian': 'role-librarian' };
         
         async function checkAdminAccess() {
             const user = auth.currentUser;
             if (!user) { window.location.href = 'index.html'; return false; }
             const userDoc = await db.collection('users').doc(user.uid).get();
             const role = userDoc.exists ? userDoc.data().role : '';
-            if (role !== 'head_librarian' && role !== 'admin') {
-                alert('Access denied. Head Librarian privileges required.');
+            if (role !== 'admin') {
+                alert('Access denied. Admin privileges required.');
                 window.location.href = 'dashboard.html';
                 return false;
             }
@@ -115,14 +109,11 @@
                 if (users.length === 0) { usersList.innerHTML = '<p>No users found.</p>'; return; }
                 let html = '';
                 for (const user of users) {
-                    const userRole = user.role || 'circulation';
-                    html += `<div class="user-card"><div class="user-info"><h3>${user.name || user.email.split('@')[0]}</h3><p>${user.email}</p><span class="user-role ${roleClass[userRole] || 'role-circulation'}">${roleNames[userRole] || 'Circulation'}</span><small>Created: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'N/A'}</small></div>
+                    const userRole = user.role || 'librarian';
+                    html += `<div class="user-card"><div class="user-info"><h3>${user.name || user.email.split('@')[0]}</h3><p>${user.email}</p><span class="user-role ${roleClass[userRole] || 'role-librarian'}">${roleNames[userRole] || 'Librarian'}</span><small>Created: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'N/A'}</small></div>
                         <div class="user-actions"><select onchange="changeRole('${user.id}', this.value)" class="role-select" ${user.id === currentUser?.uid ? 'disabled' : ''}>
-                            <option value="circulation" ${userRole === 'circulation' ? 'selected' : ''}>Circulation Desk</option>
-                            <option value="assistant" ${userRole === 'assistant' ? 'selected' : ''}>Library Assistant</option>
                             <option value="librarian" ${userRole === 'librarian' ? 'selected' : ''}>Librarian</option>
-                            <option value="senior_librarian" ${userRole === 'senior_librarian' ? 'selected' : ''}>Senior Librarian</option>
-                            <option value="head_librarian" ${userRole === 'head_librarian' ? 'selected' : ''}>Head Librarian</option>
+                            <option value="admin" ${userRole === 'admin' ? 'selected' : ''}>Admin</option>
                         </select>${user.id !== currentUser?.uid ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${user.id}')"><i class="fas fa-trash"></i> Delete</button>` : '<span class="badge-info">You</span>'}</div></div>`;
                 }
                 usersList.innerHTML = html;
