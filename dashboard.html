@@ -1913,5 +1913,283 @@ window.showCheckoutForm = function() {
 
 // Call on page load
 setTimeout(loadUserRoleForDashboard, 1000);
+    <script>
+// ========== ROLE-BASED UI CONTROL ==========
+let currentUserRole = null;
+
+// Get current user role (fallback function)
+function getCurrentUserRoleFallback() {
+    // Check if function exists in auth.js
+    if (typeof window.getCurrentUserRole === 'function') {
+        return window.getCurrentUserRole();
+    }
+    // Fallback: try to get from localStorage or check email
+    const userEmail = localStorage.getItem('userEmail');
+    if (userEmail === 'macmillanisaac08@gmail.com' || userEmail === 'admin@library.com') {
+        return 'admin';
+    }
+    return 'staff';
+}
+
+// Check if user is admin
+function isAdminCheck() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'admin';
+}
+
+// Check if user is librarian
+function isLibrarianCheck() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'librarian';
+}
+
+// Check if user is staff
+function isStaffCheck() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'staff' || role === null;
+}
+
+// Permission checks
+function canEditBooks() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'admin' || role === 'librarian';
+}
+
+function canEditMembers() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'admin' || role === 'librarian';
+}
+
+function canManageCirculation() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'admin' || role === 'librarian';
+}
+
+function canDeleteData() {
+    const role = getCurrentUserRoleFallback();
+    return role === 'admin';
+}
+
+// Load user role
+async function loadUserRoleForDashboard() {
+    const user = firebase.auth().currentUser;
+    if (user) {
+        // Try to get role from Firestore
+        try {
+            const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                currentUserRole = userDoc.data().role;
+                // Store in localStorage for quick access
+                localStorage.setItem('userRole', currentUserRole);
+            } else {
+                // First user becomes admin
+                const usersSnapshot = await firebase.firestore().collection('users').limit(1).get();
+                if (usersSnapshot.empty) {
+                    currentUserRole = 'admin';
+                    await firebase.firestore().collection('users').doc(user.uid).set({
+                        email: user.email,
+                        name: user.email.split('@')[0],
+                        role: 'admin',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    currentUserRole = 'staff';
+                }
+                localStorage.setItem('userRole', currentUserRole);
+            }
+        } catch (error) {
+            console.error('Error loading role:', error);
+            currentUserRole = localStorage.getItem('userRole') || 'staff';
+        }
+        
+        // Update UI based on role
+        updateDashboardUIForRole();
+        
+        // Add admin link if admin
+        if (currentUserRole === 'admin') {
+            addAdminLinkToSidebar();
+        }
+        
+        // Display user role in top bar
+        displayUserRole();
+    }
+}
+
+// Update dashboard UI based on role
+function updateDashboardUIForRole() {
+    // Find all action buttons
+    const addBookBtn = document.querySelector('[onclick="showAddBookForm()"]');
+    const addMemberBtn = document.querySelector('[onclick="showAddMemberForm()"]');
+    const checkoutBtn = document.querySelector('[onclick="showCheckoutForm()"]');
+    
+    if (currentUserRole === 'staff') {
+        // Staff: Hide all action buttons
+        if (addBookBtn) addBookBtn.style.display = 'none';
+        if (addMemberBtn) addMemberBtn.style.display = 'none';
+        if (checkoutBtn) checkoutBtn.style.display = 'none';
+        
+        // Hide delete buttons in catalog
+        hideDeleteButtons();
+        
+        // Disable return buttons in circulation
+        disableReturnButtons();
+        
+        showToast('You are in read-only mode (Staff)', 'info');
+    } else if (currentUserRole === 'librarian') {
+        // Librarian: Show action buttons, hide delete buttons
+        if (addBookBtn) addBookBtn.style.display = 'inline-flex';
+        if (addMemberBtn) addMemberBtn.style.display = 'inline-flex';
+        if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
+        
+        // Hide delete buttons
+        hideDeleteButtons();
+        
+        showToast('Librarian mode - You can manage books, members, and circulation', 'info');
+    } else if (currentUserRole === 'admin') {
+        // Admin: Show everything
+        showToast('Admin mode - Full access', 'success');
+    }
+}
+
+// Hide all delete buttons in catalog and members
+function hideDeleteButtons() {
+    // Hide delete buttons in catalog
+    const catalogDeleteBtns = document.querySelectorAll('#catalogTableBody .btn-danger');
+    catalogDeleteBtns.forEach(btn => btn.style.display = 'none');
+    
+    // Hide delete buttons in members
+    const memberDeleteBtns = document.querySelectorAll('#membersTableBody .btn-danger');
+    memberDeleteBtns.forEach(btn => btn.style.display = 'none');
+}
+
+// Disable return buttons for staff
+function disableReturnButtons() {
+    const returnButtons = document.querySelectorAll('[onclick*="returnBook"]');
+    returnButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = 'Staff cannot process returns';
+    });
+}
+
+// Add admin link to sidebar
+function addAdminLinkToSidebar() {
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav && !document.querySelector('.admin-nav-link')) {
+        const adminLink = document.createElement('div');
+        adminLink.className = 'nav-item admin-nav-link';
+        adminLink.setAttribute('data-view', 'admin');
+        adminLink.innerHTML = `
+            <i class="fas fa-user-shield"></i>
+            <span>User Management</span>
+        `;
+        adminLink.onclick = () => {
+            window.location.href = 'admin.html';
+        };
+        sidebarNav.appendChild(adminLink);
+    }
+}
+
+// Display user role in top bar
+function displayUserRole() {
+    const userInfo = document.querySelector('.user-info');
+    if (userInfo && !document.querySelector('.user-role-badge')) {
+        const roleBadge = document.createElement('span');
+        roleBadge.className = 'user-role-badge';
+        let roleText = '';
+        let roleColor = '';
+        
+        if (currentUserRole === 'admin') {
+            roleText = 'Admin';
+            roleColor = '#e74c3c';
+        } else if (currentUserRole === 'librarian') {
+            roleText = 'Librarian';
+            roleColor = '#27ae60';
+        } else {
+            roleText = 'Staff';
+            roleColor = '#3498db';
+        }
+        
+        roleBadge.innerHTML = `<span style="background: ${roleColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin-left: 10px;">${roleText}</span>`;
+        userInfo.insertBefore(roleBadge, userInfo.querySelector('.logout-btn'));
+    }
+}
+
+// Show toast message
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Override delete functions
+const originalDeleteBook = window.deleteBook;
+if (originalDeleteBook) {
+    window.deleteBook = async function(bookId) {
+        if (currentUserRole !== 'admin') {
+            showToast('Permission denied: Only admins can delete books', 'error');
+            return;
+        }
+        if (confirm('Delete this book?')) {
+            await originalDeleteBook(bookId);
+        }
+    };
+}
+
+const originalDeleteMember = window.deleteMember;
+if (originalDeleteMember) {
+    window.deleteMember = async function(memberId) {
+        if (currentUserRole !== 'admin') {
+            showToast('Permission denied: Only admins can delete members', 'error');
+            return;
+        }
+        if (confirm('Delete this member?')) {
+            await originalDeleteMember(memberId);
+        }
+    };
+}
+
+// Override showAddBookForm
+const originalShowAddBookForm = window.showAddBookForm;
+if (originalShowAddBookForm) {
+    window.showAddBookForm = function() {
+        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
+            showToast('Permission denied: Only admins and librarians can add books', 'error');
+            return;
+        }
+        originalShowAddBookForm();
+    };
+}
+
+// Override showAddMemberForm
+const originalShowAddMemberForm = window.showAddMemberForm;
+if (originalShowAddMemberForm) {
+    window.showAddMemberForm = function() {
+        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
+            showToast('Permission denied: Only admins and librarians can add members', 'error');
+            return;
+        }
+        originalShowAddMemberForm();
+    };
+}
+
+// Override showCheckoutForm
+const originalShowCheckoutForm = window.showCheckoutForm;
+if (originalShowCheckoutForm) {
+    window.showCheckoutForm = function() {
+        if (currentUserRole !== 'admin' && currentUserRole !== 'librarian') {
+            showToast('Permission denied: Only admins and librarians can process checkouts', 'error');
+            return;
+        }
+        originalShowCheckoutForm();
+    };
+}
+
+// Call on page load
+setTimeout(loadUserRoleForDashboard, 1500);
+</script>
 </body>
 </html>
