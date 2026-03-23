@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Library Management System - Login</title>
+    <title>MC Library Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -15,7 +15,13 @@
     <div class="auth-wrapper">
         <div class="auth-card">
             <div class="auth-header">
-                <i class="fas fa-book" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <!-- Logo Section -->
+                <div class="logo-container">
+                    <img src="bss.png" alt="MC Library Logo" class="auth-logo" onerror="this.style.display='none'; document.querySelector('.logo-fallback').style.display='block'">
+                    <div class="logo-fallback" style="display: none;">
+                        <i class="fas fa-book" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
                 <h1>MC Library Management System</h1>
                 <p>Powered by Koha-inspired design</p>
             </div>
@@ -58,6 +64,8 @@
             
             <div class="auth-footer">
                 <i class="fas fa-shield-alt"></i> Secure login with Firebase Authentication
+                <br>
+                <small style="opacity: 0.7;">© 2024 MC Library - All Rights Reserved</small>
             </div>
         </div>
     </div>
