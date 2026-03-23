@@ -750,3 +750,275 @@ tr:hover {
 body.menu-open {
     overflow: hidden;
 }
+/* ========== RESPONSIVE DESIGN - NO HORIZONTAL SCROLL ========== */
+
+/* Prevent horizontal scroll on all devices */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+}
+
+/* Make all containers respect screen width */
+.app-wrapper,
+.main-content,
+.content-area,
+.sidebar,
+.top-bar,
+.form-container,
+.table-container {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Mobile First - Base Styles */
+@media (max-width: 768px) {
+    /* Ensure no horizontal scroll */
+    body {
+        overflow-x: hidden;
+    }
+    
+    /* Sidebar adjustments */
+    .sidebar {
+        width: 85%;
+        max-width: 280px;
+        transform: translateX(-100%);
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    /* Main content takes full width */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Top bar adjustments */
+    .top-bar {
+        padding: 12px 15px;
+        position: sticky;
+        top: 0;
+        z-index: 99;
+    }
+    
+    /* Content area padding */
+    .content-area {
+        padding: 15px;
+    }
+    
+    /* Make stats cards stack vertically */
+    .stats-container {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    /* Tables - make scrollable horizontally but not the whole page */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -15px;
+        padding: 0 15px;
+        width: calc(100% + 30px);
+    }
+    
+    .table-container table {
+        min-width: 600px;
+        font-size: 13px;
+    }
+    
+    th, td {
+        padding: 10px 8px;
+        white-space: nowrap;
+    }
+    
+    /* Form containers */
+    .form-container {
+        padding: 15px;
+        margin: 0 0 15px 0;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .section-header h2 {
+        font-size: 1.1rem;
+    }
+    
+    /* Form rows stack vertically */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    /* Search box adjustments */
+    .search-box {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .search-box input {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .search-box button {
+        width: 100%;
+    }
+    
+    /* DDC Navigation - wrap nicely */
+    .ddc-nav {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 8px;
+    }
+    
+    .ddc-class {
+        padding: 8px 3px;
+    }
+    
+    .ddc-class strong {
+        font-size: 0.9rem;
+    }
+    
+    .ddc-class small {
+        font-size: 0.7rem;
+    }
+    
+    /* Quick action buttons */
+    .quick-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .quick-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Modal adjustments */
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    
+    /* Buttons */
+    .btn {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+    
+    /* User info */
+    .user-info {
+        gap: 10px;
+    }
+    
+    .user-name {
+        font-size: 0.9rem;
+    }
+    
+    .logout-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    /* Menu toggle button */
+    .menu-toggle {
+        padding: 8px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Tablet Styles (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .stats-container {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+    }
+    
+    .content-area {
+        padding: 20px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .ddc-nav {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    }
+}
+
+/* Small phones (up to 480px) */
+@media (max-width: 480px) {
+    .top-bar {
+        padding: 10px 12px;
+    }
+    
+    .content-area {
+        padding: 12px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.3rem;
+    }
+    
+    .stat-card i {
+        font-size: 1.5rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1rem;
+    }
+    
+    .form-group label {
+        font-size: 0.8rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .close {
+        font-size: 1.5rem;
+    }
+}
+
+/* Fix for table scrolling - keeps table readable while preventing page scroll */
+.table-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--gray);
+    border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
