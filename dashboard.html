@@ -278,7 +278,10 @@
                     recent.forEach(doc => {
                         const t = doc.data();
                         const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
-                        recentTransactionsHtml += `<tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
+                        recentTransactionsHtml += `
+
+
+                            <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
                     });
                 } catch(e) { console.log('No transactions'); }
                 
@@ -435,15 +438,15 @@
                     const t = doc.data();
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                     html += `<tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                        <td>${t.transactionId} on
-                        <td>${t.accessionNo} on
-                        <td>${t.memberId} on
-                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} on
-                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} on
-                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} on
-                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> on
-                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} on
-                       </tr>`;
+                        <td>${t.transactionId} \n
+                        <td>${t.accessionNo} \n
+                        <td>${t.memberId} \n
+                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} \n
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} \n
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} \n
+                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> \n
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} \n
+                        </tr>`;
                 });
                 html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
@@ -475,7 +478,7 @@
                 let finesHtml = '';
                 
                 if (fines.empty) {
-                    finesHtml = '<tr><td colspan="8" style="text-align:center">No fines recorded</td></tr>';
+                    finesHtml = '\\n                                 <td colspan="8" style="text-align:center">No fines recorded</td>\\n                            ';
                 } else {
                     fines.forEach(doc => {
                         const f = doc.data();
@@ -486,16 +489,16 @@
                         const statusText = f.status || 'Unpaid';
                         
                         finesHtml += `
-                            <tr>
-                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
-                                <td>${dueDateStr}</td>
-                                <td>${returnDateStr}</td>
-                                <td style="text-align:center">${f.daysLate || 0}</td>
-                                <td>K${f.finePerDay || 500}</td>
-                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
-                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
-                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                            </tr>
+                             <tr>
+                                 <td><strong>${f.transactionId || 'N/A'}</strong></td>
+                                 <td>${dueDateStr}</td>
+                                 <td>${returnDateStr}</td>
+                                 <td style="text-align:center">${f.daysLate || 0}</td>
+                                 <td>K${f.finePerDay || 500}</td>
+                                 <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
+                                 <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+                                 <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
+                             </tr>
                         `;
                     });
                 }
@@ -515,7 +518,7 @@
                         <div class="table-container">
                             <table>
                                 <thead>
-                                    <tr>
+                                     <tr>
                                         <th>Transaction ID</th>
                                         <th>Due Date</th>
                                         <th>Return Date</th>
@@ -524,7 +527,7 @@
                                         <th>Total Fine</th>
                                         <th>Status</th>
                                         <th>Action</th>
-                                    </tr>
+                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${finesHtml}
@@ -545,11 +548,11 @@
             let classesHtml = '';
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
-                    <tr>
-                        <td><strong>${ddc.number}</strong></td>
-                        <td>${ddc.name}</td>
-                        <td>${ddc.description}</td>
-                    </tr>
+                     <tr>
+                         <td><strong>${ddc.number}</strong></td>
+                         <td>${ddc.name}</td>
+                         <td>${ddc.description}</td>
+                     </tr>
                 `;
             });
             
@@ -561,11 +564,11 @@
                     <div class="table-container">
                         <table>
                             <thead>
-                                <tr>
+                                 <tr>
                                     <th>Class Number</th>
                                     <th>Class Name</th>
                                     <th>Description / Example Subjects</th>
-                                </tr>
+                                 </tr>
                             </thead>
                             <tbody>
                                 ${classesHtml}
