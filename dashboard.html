@@ -589,6 +589,27 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+       
+        // ========== FIX HORIZONTAL SCROLL ON MOBILE ==========
+function fixHorizontalScroll() {
+    if (window.innerWidth <= 768) {
+        document.body.style.overflowX = 'hidden';
+        document.documentElement.style.overflowX = 'hidden';
+        
+        // Fix any elements that might cause scroll
+        const elements = document.querySelectorAll('.table-container, .form-container');
+        elements.forEach(el => {
+            if (el.scrollWidth > el.clientWidth) {
+                // Let table container scroll, but not the body
+                el.style.overflowX = 'auto';
+            }
+        });
+    }
+}
+
+// Run on load and resize
+window.addEventListener('load', fixHorizontalScroll);
+window.addEventListener('resize', fixHorizontalScroll);
 
         // ========== GLOBALS ==========
         let currentUser = null;
