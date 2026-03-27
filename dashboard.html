@@ -271,7 +271,7 @@
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 
-                // Calculate total books and available copies from books collection
+                // Calculate total books and available copies
                 let totalBooks = 0;
                 let totalAvailable = 0;
                 booksSnapshot.forEach(doc => { 
@@ -423,7 +423,12 @@
                         <div class="section-header"><h2><i class="fas fa-books"></i> Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()">Add Book</button></div>
                         <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()">Search</button> <button class="btn btn-outline" onclick="clearCatalogSearch()">Clear</button></div>
                         <div class="ddc-nav">${ddcMainClasses.map(d => `<div class="ddc-class" onclick="filterByDDC('${d.number}')"><strong>${d.number}</strong><br><small>${d.name}</small></div>`).join('')}</div>
-                        <div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody></table></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody>
+                            </table>
+                        </div>
                     </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading catalog</p>'; }
@@ -478,9 +483,9 @@
                             <td>${m.name}</td>
                             <td>${m.category}</td>
                             <td>${m.phone}</td>
-                            <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span>  on
+                            <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span></td>
                             <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button>  on
-                          </tr>
+                           </tr>
                     `;
                 });
                 const html = `
@@ -489,10 +494,10 @@
                         <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name, ID, or phone..."><button class="btn btn-primary" onclick="searchMembers()">Search</button> <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button></div>
                         <div class="table-container">
                             <thead>
-                                 <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
+                                <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
                             </thead>
                             <tbody id="membersTableBody">
-                                ${membersHtml || '<tr><td colspan="6">No members registered</td></tr>'}
+                                ${membersHtml || '}<tr><td colspan="6">No members registered</td></tr>'}
                             </tbody>
                         </div>
                     </div>`;
@@ -534,7 +539,7 @@
                         <div class="search-box"><input type="text" id="circSearch" placeholder="Search by ID, accession, or member..."><button class="btn btn-primary" onclick="searchCirc()">Search</button></div>
                         <div class="table-container">
                             <thead>
-                                 <tr><th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th></tr>
+                                <tr><th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th></tr>
                             </thead>
                             <tbody id="circTableBody">`;
                 transactions.forEach(doc => {
@@ -550,7 +555,7 @@
                             <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  <
                             <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  <
                             <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  <
-                         </tr>
+                          </tr>
                     `;
                 });
                 html += '</tbody></div></div>';
@@ -605,7 +610,7 @@
                                 <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong>  on
                                 <td><span class="badge badge-${statusClass}">${statusText}</span>  on
                                 <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}  on
-                             </tr>
+                              </tr>
                         `;
                     });
                 }
@@ -623,14 +628,21 @@
                             <h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2>
                         </div>
                         <div class="table-container">
-                            <table>
+                            表
                                 <thead>
-                                     <tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Status</th><th>Action</th></tr>
-                                </thead>
+                                     <th>Transaction ID</th>
+                                     <th>Due Date</th>
+                                     <th>Return Date</th>
+                                     <th>Days Late</th>
+                                     <th>Fine per Day</th>
+                                     <th>Total Fine</th>
+                                     <th>Status</th>
+                                     <th>Action</th>
+                                     </thead>
                                 <tbody>
                                     ${finesHtml}
                                 </tbody>
-                            </table>
+                             </div>
                         </div>
                     </div>
                 `;
@@ -646,10 +658,10 @@
             let classesHtml = '';
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
-                    <tr>
-                        <td><strong>${ddc.number}</strong>  on
-                        <td>${ddc.name}  on
-                        <td>${ddc.description}  on
+                     <tr>
+                         <td><strong>${ddc.number}</strong></td>
+                         <td>${ddc.name}</td>
+                         <td>${ddc.description}</td>
                      </tr>
                 `;
             });
@@ -660,15 +672,16 @@
                         <h2><i class="fas fa-sitemap"></i> Dewey Decimal Classification (DDC)</h2>
                     </div>
                     <div class="table-container">
-                        <table>
+                        表
                             <thead>
-                                 <tr><th>Class Number</th><th>Class Name</th><th>Description / Example Subjects</th></tr>
-                            </thead>
+                                 <th>Class Number</th>
+                                 <th>Class Name</th>
+                                 <th>Description / Example Subjects</th>
+                                 </thead>
                             <tbody>
                                 ${classesHtml}
                             </tbody>
-                        </table>
-                    </div>
+                         </div>
                     <div style="margin-top:20px; padding:20px; background:#f8f9fa; border-radius:10px;">
                         <h4><i class="fas fa-info-circle"></i> About the DDC System</h4>
                         <p>The Dewey Decimal Classification (DDC) is a library classification system created by Melvil Dewey in 1876. It organizes knowledge into ten main classes, each represented by a three-digit number. The system is used in over 200,000 libraries in 135 countries.</p>
