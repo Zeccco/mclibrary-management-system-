@@ -271,6 +271,7 @@
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 
+                // Calculate total books and available copies from books collection
                 let totalBooks = 0;
                 let totalAvailable = 0;
                 booksSnapshot.forEach(doc => { 
@@ -279,6 +280,7 @@
                     totalAvailable += b.availableCopies || 0; 
                 });
                 
+                // Get borrowed count from transactions where returnDate is null
                 const allTransactions = await db.collection('transactions').get();
                 let borrowedCount = 0;
                 const overdueList = [];
@@ -315,12 +317,12 @@
                         const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                         recentTransactionsHtml += `
                             <tr>
-                                <td>${t.transactionId || 'N/A'}</td>
-                                <td>${t.accessionNo || 'N/A'}</td>
-                                <td>${t.memberId || 'N/A'}</td>
-                                <td>${issueDate}</td>
-                                <td><span class="badge badge-${t.status === 'Borrowed' ? (isOverdue ? 'overdue' : 'borrowed') : 'available'}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span></td>
-                            </tr>
+                                <td>${t.transactionId || 'N/A'}  on
+                                <td>${t.accessionNo || 'N/A'}  on
+                                <td>${t.memberId || 'N/A'}  on
+                                <td>${issueDate}  on
+                                <td><span class="badge badge-${t.status === 'Borrowed' ? (isOverdue ? 'overdue' : 'borrowed') : 'available'}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span>  on
+                              on
                         `;
                     });
                 } catch(e) { console.log('No transactions'); }
@@ -334,24 +336,28 @@
                                 <span class="badge badge-overdue">Action Required</span>
                             </div>
                             <div class="table-container">
-                                <table>
+                                表
                                     <thead>
-                                        <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Due Date</th><th>Days Overdue</th><th>Action</th></tr>
-                                    </thead>
+                                         <th>Transaction ID</th>
+                                         <th>Accession No</th>
+                                         <th>Member ID</th>
+                                         <th>Due Date</th>
+                                         <th>Days Overdue</th>
+                                         <th>Action</th>
+                                         </thead>
                                     <tbody>
                                         ${overdueList.map(overdue => `
                                             <tr style="background: #fff5f5;">
-                                                <td><strong>${overdue.transactionId}</strong></td>
-                                                <td>${overdue.accessionNo}</td>
-                                                <td>${overdue.memberId}</td>
-                                                <td>${overdue.dueDate.toLocaleDateString()}</td>
-                                                <td><span class="badge badge-overdue">${overdue.daysOverdue} days</span></td>
-                                                <td><button class="btn btn-warning action-btn" onclick="showCheckoutForm()">Process Return</button></td>
-                                            </tr>
+                                                 <td><strong>${overdue.transactionId}</strong>  <
+                                                 <td>${overdue.accessionNo}  <
+                                                 <td>${overdue.memberId}  <
+                                                 <td>${overdue.dueDate.toLocaleDateString()}  <
+                                                 <td><span class="badge badge-overdue">${overdue.daysOverdue} days</span>  <
+                                                 <td><button class="btn btn-warning action-btn" onclick="showCheckoutForm()">Process Return</button>  <
+                                              <
                                         `).join('')}
                                     </tbody>
-                                </table>
-                            </div>
+                                 </div>
                         </div>
                     `;
                 }
@@ -370,11 +376,10 @@
                     <div class="form-container">
                         <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
                         <div class="table-container">
-                            <table>
-                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
-                                <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
-                            </table>
-                        </div>
+                            表
+                                <thead> <th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th> </thead>
+                                <tbody>${recentTransactionsHtml || ' <td colspan="5" style="text-align:center">No recent transactions < '}</tbody>
+                             </div>
                     </div>
                     <div class="quick-actions">
                         <button class="btn btn-primary" onclick="showAddBookForm()"><i class="fas fa-plus"></i> Add Book</button>
@@ -400,18 +405,18 @@
                     const available = b.availableCopies || 0;
                     booksHtml += `
                         <tr class="catalog-row" data-title="${(b.title || '').toLowerCase()}" data-author="${(b.author || '').toLowerCase()}" data-accession="${(b.accessionNo || '').toLowerCase()}" data-isbn="${(b.isbn || '').toLowerCase()}">
-                            <td><strong>${b.accessionNo}</strong></td>
-                            <td>${b.title}</td>
-                            <td>${b.author}</td>
-                            <td>${b.isbn || '-'}</td>
-                            <td>${b.subject || '-'}</td>
-                            <td>${b.ddcNumber || '-'}</td>
-                            <td>${b.year || '-'}</td>
-                            <td>${b.totalCopies}</td>
-                            <td style="color:${available>0?'green':'red'}">${available}</td>
-                            <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span></td>
-                            <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button></td>
-                        </tr>
+                             <td><strong>${b.accessionNo}</strong> <
+                             <td>${b.title} <
+                             <td>${b.author} <
+                             <td>${b.isbn || '-'} <
+                             <td>${b.subject || '-'} <
+                             <td>${b.ddcNumber || '-'} <
+                             <td>${b.year || '-'} <
+                             <td>${b.totalCopies} <
+                            <td style="color:${available>0?'green':'red'}">${available} <
+                             <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span> <
+                             <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button> <
+                          <
                     `;
                 });
                 const html = `
@@ -420,11 +425,9 @@
                         <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()">Search</button> <button class="btn btn-outline" onclick="clearCatalogSearch()">Clear</button></div>
                         <div class="ddc-nav">${ddcMainClasses.map(d => `<div class="ddc-class" onclick="filterByDDC('${d.number}')"><strong>${d.number}</strong><br><small>${d.name}</small></div>`).join('')}</div>
                         <div class="table-container">
-                            <table>
-                                <thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody>
-                            </table>
-                        </div>
+                             <thead> <th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th> </thead>
+                            <tbody id="catalogTableBody">${booksHtml || ' <td colspan="11">No books < '}</tbody>
+                         </div>
                     </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading catalog</p>'; }
@@ -472,19 +475,19 @@
                 const members = await db.collection('members').orderBy('memberId').get();
                 let membersHtml = '';
                 if (members.empty) {
-                    membersHtml = '<tr><td colspan="6" style="text-align:center">No members registered</td></tr>';
+                    membersHtml = ' <td colspan="6" style="text-align:center">No members registered < ';
                 } else {
                     members.forEach(doc => {
                         const m = doc.data();
                         membersHtml += `
                             <tr class="member-row" data-name="${(m.name || '').toLowerCase()}" data-id="${(m.memberId || '').toLowerCase()}" data-phone="${(m.phone || '').toLowerCase()}">
-                                <td><strong>${m.memberId || 'N/A'}</strong></td>
-                                <td>${m.name || 'N/A'}</td>
-                                <td>${m.category || 'N/A'}</td>
-                                <td>${m.phone || 'N/A'}</td>
-                                <td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span>  on
-                                <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button>  on
-                               </tr>
+                                 <td><strong>${m.memberId || 'N/A'}</strong> <
+                                 <td>${m.name || 'N/A'} <
+                                 <td>${m.category || 'N/A'} <
+                                 <td>${m.phone || 'N/A'} <
+                                 <td><span class="badge badge-${m.status === 'Active' ? 'available' : 'borrowed'}">${m.status || 'Active'}</span> <
+                                 <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button> <
+                              <
                         `;
                     });
                 }
@@ -500,22 +503,19 @@
                             <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button>
                         </div>
                         <div class="table-container">
-                            <table>
+                            表
                                 <thead>
-                                    <tr>
-                                        <th>Member ID</th>
-                                        <th>Name</th>
-                                        <th>Category</th>
-                                        <th>Phone</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
+                                     <th>Member ID</th>
+                                     <th>Name</th>
+                                     <th>Category</th>
+                                     <th>Phone</th>
+                                     <th>Status</th>
+                                     <th>Actions</th>
+                                     </thead>
                                 <tbody id="membersTableBody">
                                     ${membersHtml}
                                 </tbody>
-                            </table>
-                        </div>
+                             </div>
                     </div>
                 `;
                 contentArea.innerHTML = html;
@@ -553,7 +553,7 @@
                 const transactions = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let transactionsHtml = '';
                 if (transactions.empty) {
-                    transactionsHtml = '<td><td colspan="8" style="text-align:center">No transactions found</td></tr>';
+                    transactionsHtml = ' <td colspan="8" style="text-align:center">No transactions found < ';
                 } else {
                     transactions.forEach(doc => {
                         const t = doc.data();
@@ -563,15 +563,15 @@
                         const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                         transactionsHtml += `
                             <tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                                <td>${t.transactionId || 'N/A'} </td>
-                                <td>${t.accessionNo || 'N/A'} </td>
-                                <td>${t.memberId || 'N/A'} </td>
-                                <td>${issueDate} </td>
-                                <td>${dueDate} </td>
-                                <td>${returnDate} </td>
-                                <td><span class="badge badge-${isOverdue ? 'overdue' : (t.status === 'Borrowed' ? 'borrowed' : 'available')}">${t.status || 'N/A'}${isOverdue ? ' Overdue' : ''}</span> </td>
-                                <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')">Return</button>` : '-'} </td>
-                            </tr>
+                                 <td>${t.transactionId || 'N/A'} <
+                                 <td>${t.accessionNo || 'N/A'} <
+                                 <td>${t.memberId || 'N/A'} <
+                                 <td>${issueDate} <
+                                 <td>${dueDate} <
+                                 <td>${returnDate} <
+                                 <td><span class="badge badge-${isOverdue ? 'overdue' : (t.status === 'Borrowed' ? 'borrowed' : 'available')}">${t.status || 'N/A'}${isOverdue ? ' Overdue' : ''}</span> <
+                                 <td>${t.status === 'Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}', '${t.accessionNo}')">Return</button>` : '-'} <
+                              <
                         `;
                     });
                 }
@@ -586,24 +586,21 @@
                             <button class="btn btn-primary" onclick="searchCirc()">Search</button>
                         </div>
                         <div class="table-container">
-                            <table>
+                            表
                                 <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Accession</th>
-                                        <th>Member</th>
-                                        <th>Issue</th>
-                                        <th>Due</th>
-                                        <th>Return</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
+                                     <th>ID</th>
+                                     <th>Accession</th>
+                                     <th>Member</th>
+                                     <th>Issue</th>
+                                     <th>Due</th>
+                                     <th>Return</th>
+                                     <th>Status</th>
+                                     <th>Action</th>
+                                     </thead>
                                 <tbody id="circTableBody">
                                     ${transactionsHtml}
                                 </tbody>
-                            </table>
-                        </div>
+                             </div>
                     </div>
                 `;
                 contentArea.innerHTML = html;
@@ -638,7 +635,7 @@
                 let finesHtml = '';
                 
                 if (fines.empty) {
-                    finesHtml = '<tr><td colspan="8" style="text-align:center">No fines recorded</td></tr>';
+                    finesHtml = ' <td colspan="8" style="text-align:center">No fines recorded < ';
                 } else {
                     fines.forEach(doc => {
                         const f = doc.data();
@@ -649,16 +646,16 @@
                         const statusText = f.status || 'Unpaid';
                         
                         finesHtml += `
-                            <tr>
-                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
-                                <td>${dueDateStr}</td>
-                                <td>${returnDateStr}</td>
-                                <td style="text-align:center">${f.daysLate || 0}</td>
-                                <td>K${f.finePerDay || 500}</td>
-                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
-                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
-                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                            </tr>
+                              <
+                                  .<strong>${f.transactionId || 'N/A'}</strong> <
+                                  .${dueDateStr} <
+                                  .${returnDateStr} <
+                                <td style="text-align:center">${f.daysLate || 0} <
+                                  .K${f.finePerDay || 500} <
+                                  .<strong style="color:#e74c3c;">K${f.totalFine || 0}</strong> <
+                                  .<span class="badge badge-${statusClass}">${statusText}</span> <
+                                  .${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'} <
+                              <
                         `;
                     });
                 }
@@ -676,24 +673,21 @@
                             <h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2>
                         </div>
                         <div class="table-container">
-                            <table>
+                            表
                                 <thead>
-                                    <tr>
-                                        <th>Transaction ID</th>
-                                        <th>Due Date</th>
-                                        <th>Return Date</th>
-                                        <th>Days Late</th>
-                                        <th>Fine per Day</th>
-                                        <th>Total Fine</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
+                                     <th>Transaction ID</th>
+                                     <th>Due Date</th>
+                                     <th>Return Date</th>
+                                     <th>Days Late</th>
+                                     <th>Fine per Day</th>
+                                     <th>Total Fine</th>
+                                     <th>Status</th>
+                                     <th>Action</th>
+                                     </thead>
                                 <tbody>
                                     ${finesHtml}
                                 </tbody>
-                            </table>
-                        </div>
+                             </div>
                     </div>
                 `;
                 contentArea.innerHTML = html;
@@ -708,11 +702,11 @@
             let classesHtml = '';
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
-                    <tr>
-                         <td><strong>${ddc.number}</strong></td>
-                         <td>${ddc.name}</td>
-                         <td>${ddc.description}</td>
-                    </tr>
+                     <
+                          <strong>${ddc.number}</strong> <
+                          .${ddc.name} <
+                          .${ddc.description} <
+                     <
                 `;
             });
             
@@ -722,19 +716,16 @@
                         <h2><i class="fas fa-sitemap"></i> Dewey Decimal Classification (DDC)</h2>
                     </div>
                     <div class="table-container">
-                        <table>
+                        表
                             <thead>
-                                <tr>
-                                    <th>Class Number</th>
-                                    <th>Class Name</th>
-                                    <th>Description / Example Subjects</th>
-                                </tr>
-                            </thead>
+                                 <th>Class Number</th>
+                                 <th>Class Name</th>
+                                 <th>Description / Example Subjects</th>
+                                 </thead>
                             <tbody>
                                 ${classesHtml}
                             </tbody>
-                        </table>
-                    </div>
+                         </div>
                     <div style="margin-top:20px; padding:20px; background:#f8f9fa; border-radius:10px;">
                         <h4><i class="fas fa-info-circle"></i> About the DDC System</h4>
                         <p>The Dewey Decimal Classification (DDC) is a library classification system created by Melvil Dewey in 1876. It organizes knowledge into ten main classes, each represented by a three-digit number. The system is used in over 200,000 libraries in 135 countries.</p>
