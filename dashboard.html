@@ -63,6 +63,7 @@
         .badge-available { background: #d4edda; color: #155724; }
         .badge-borrowed { background: #f8d7da; color: #721c24; }
         .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-overdue { background: #e74c3c; color: white; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
         .btn { padding: 10px 20px; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary { background: var(--primary); color: white; }
@@ -143,6 +144,15 @@
             .form-group input, .form-group select { padding: 10px; font-size: 13px; }
             .btn { padding: 8px 12px; font-size: 0.8rem; }
             .action-btn { padding: 4px 8px; font-size: 0.7rem; }
+        }
+        .overdue-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            border-left: 4px solid #e74c3c;
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+        .overdue-card:hover {
+            transform: translateX(5px);
         }
     </style>
 </head>
@@ -261,43 +271,125 @@
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // ========== DASHBOARD ==========
+        // ========== DASHBOARD WITH FIXED BORROWED COUNT AND OVERDUE DISPLAY ==========
         async function loadDashboard() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading dashboard...</p>';
             try {
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
-                const borrowedSnapshot = await db.collection('transactions').where('status', '==', 'Borrowed').get();
-                let totalBooks = 0, totalAvailable = 0;
-                booksSnapshot.forEach(doc => { const b = doc.data(); totalBooks += b.totalCopies || 0; totalAvailable += b.availableCopies || 0; });
                 
+                // Get all borrowed transactions (not just status='Borrowed', but also check returnDate)
+                const allTransactions = await db.collection('transactions').get();
+                
+                // Calculate borrowed books correctly
+                let borrowedCount = 0;
+                const overdueList = [];
+                const today = new Date();
+                
+                allTransactions.forEach(doc => {
+                    const t = doc.data();
+                    // A book is borrowed if returnDate is null OR returnDate is empty
+                    const isBorrowed = !t.returnDate || t.returnDate === null;
+                    
+                    if (isBorrowed) {
+                        borrowedCount++;
+                        
+                        // Check if overdue
+                        if (t.dueDate) {
+                            const dueDate = t.dueDate.toDate();
+                            if (dueDate < today) {
+                                overdueList.push({
+                                    transactionId: t.transactionId,
+                                    accessionNo: t.accessionNo,
+                                    memberId: t.memberId,
+                                    dueDate: dueDate,
+                                    daysOverdue: Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24))
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                // Calculate total books (sum of copies)
+                let totalBooks = 0, totalAvailable = 0;
+                booksSnapshot.forEach(doc => { 
+                    const b = doc.data(); 
+                    totalBooks += b.totalCopies || 0; 
+                    totalAvailable += b.availableCopies || 0; 
+                });
+                
+                const totalMembers = membersSnapshot.size;
+                
+                // Recent transactions
                 let recentTransactionsHtml = '';
                 try {
                     const recent = await db.collection('transactions').orderBy('issueDate', 'desc').limit(5).get();
                     recent.forEach(doc => {
                         const t = doc.data();
                         const issueDate = t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : 'N/A';
+                        const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                         recentTransactionsHtml += `
-
-
-                            <tr><td>${t.transactionId || 'N/A'}</td><td>${t.accessionNo || 'N/A'}</td><td>${t.memberId || 'N/A'}</td><td>${issueDate}</td><td><span class="badge badge-${t.status === 'Borrowed' ? 'borrowed' : 'available'}">${t.status || 'N/A'}</span></td></tr>`;
+                            <tr>
+                                <td>${t.transactionId || 'N/A'}  on
+                                <td>${t.accessionNo || 'N/A'}  on
+                                <td>${t.memberId || 'N/A'}  on
+                                <td>${issueDate}  on
+                                <td><span class="badge badge-${t.status === 'Borrowed' ? (isOverdue ? 'overdue' : 'borrowed') : 'available'}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span>  on
+                             on
+                        `;
                     });
                 } catch(e) { console.log('No transactions'); }
+                
+                // Overdue books HTML
+                let overdueHtml = '';
+                if (overdueList.length > 0) {
+                    overdueHtml = `
+                        <div class="form-container" style="border-left: 4px solid #e74c3c;">
+                            <div class="section-header">
+                                <h2><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> Overdue Books (${overdueList.length})</h2>
+                                <span class="badge badge-overdue">Action Required</span>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Due Date</th><th>Days Overdue</th><th>Action</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${overdueList.map(overdue => `
+                                            <tr style="background: #fff5f5;">
+                                                <td><strong>${overdue.transactionId}</strong></td>
+                                                <td>${overdue.accessionNo}</td>
+                                                <td>${overdue.memberId}</td>
+                                                <td>${overdue.dueDate.toLocaleDateString()}</td>
+                                                <td><span class="badge badge-overdue">${overdue.daysOverdue} days</span></td>
+                                                <td><button class="btn btn-warning action-btn" onclick="showCheckoutForm()">Process Return</button></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
                 
                 const html = `
                     <div class="stats-container">
                         <div class="stat-card"><i class="fas fa-book"></i><h3>Total Books</h3><div class="stat-number">${totalBooks}</div><small>${booksSnapshot.size} titles</small></div>
                         <div class="stat-card"><i class="fas fa-check-circle"></i><h3>Available</h3><div class="stat-number">${totalAvailable}</div></div>
-                        <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed</h3><div class="stat-number">${totalBooks - totalAvailable}</div></div>
-                        <div class="stat-card"><i class="fas fa-users"></i><h3>Members</h3><div class="stat-number">${membersSnapshot.size}</div></div>
-                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${borrowedSnapshot.size}</div></div>
+                        <div class="stat-card"><i class="fas fa-exchange-alt"></i><h3>Borrowed</h3><div class="stat-number" style="color: ${borrowedCount > 0 ? '#e67e22' : '#27ae60'}">${borrowedCount}</div></div>
+                        <div class="stat-card"><i class="fas fa-users"></i><h3>Members</h3><div class="stat-number">${totalMembers}</div></div>
+                        <div class="stat-card"><i class="fas fa-clock"></i><h3>Active Borrowings</h3><div class="stat-number">${borrowedCount}</div></div>
                     </div>
+                    
+                    ${overdueHtml}
+                    
                     <div class="form-container">
                         <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
                         <div class="table-container">
-                            <table><thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
-                            <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
+                            <table>
+                                <thead> <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr> </thead>
+                                <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
                             </table>
                         </div>
                     </div>
@@ -307,7 +399,10 @@
                         <button class="btn btn-warning" onclick="showCheckoutForm()"><i class="fas fa-hand-holding"></i> Checkout</button>
                     </div>`;
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error loading dashboard</p>'; }
+            } catch (error) { 
+                console.error(error);
+                contentArea.innerHTML = '<p>Error loading dashboard</p>'; 
+            }
         }
 
         // ========== CATALOG ==========
@@ -321,24 +416,24 @@
                     const b = doc.data();
                     const available = b.availableCopies || 0;
                     booksHtml += `<tr class="catalog-row" data-title="${(b.title || '').toLowerCase()}" data-author="${(b.author || '').toLowerCase()}" data-accession="${(b.accessionNo || '').toLowerCase()}" data-isbn="${(b.isbn || '').toLowerCase()}">
-                        <td><strong>${b.accessionNo}</strong></td>
-                        <td>${b.title}</td>
-                        <td>${b.author}</td>
-                        <td>${b.isbn || '-'}</td>
-                        <td>${b.subject || '-'}</td>
-                        <td>${b.ddcNumber || '-'}</td>
-                        <td>${b.year || '-'}</td>
-                        <td>${b.totalCopies}</td>
-                        <td style="color:${available>0?'green':'red'}">${available}</td>
-                        <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span></td>
-                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button></td>
-                    </tr>`;
+                        <td><strong>${b.accessionNo}</strong>  on
+                        <td>${b.title}  on
+                        <td>${b.author}  on
+                        <td>${b.isbn || '-'}  on
+                        <td>${b.subject || '-'}  on
+                        <td>${b.ddcNumber || '-'}  on
+                        <td>${b.year || '-'}  on
+                        <td>${b.totalCopies}  on
+                        <td style="color:${available>0?'green':'red'}">${available}  on
+                        <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span>  on
+                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button>  on
+                     on`;
                 });
                 const html = `<div class="form-container">
                     <div class="section-header"><h2><i class="fas fa-books"></i> Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()">Add Book</button></div>
                     <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()">Search</button> <button class="btn btn-outline" onclick="clearCatalogSearch()">Clear</button></div>
                     <div class="ddc-nav">${ddcMainClasses.map(d => `<div class="ddc-class" onclick="filterByDDC('${d.number}')"><strong>${d.number}</strong><br><small>${d.name}</small></div>`).join('')}</div>
-                    <div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody></table></div>
+                    <div class="table-container"> <table> <thead> <tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr> </thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody> </table> </div>
                 </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading catalog</p>'; }
@@ -388,18 +483,18 @@
                 members.forEach(doc => {
                     const m = doc.data();
                     membersHtml += `<tr class="member-row" data-name="${(m.name || '').toLowerCase()}" data-id="${(m.memberId || '').toLowerCase()}" data-phone="${(m.phone || '').toLowerCase()}">
-                        <td><strong>${m.memberId}</strong></td>
-                        <td>${m.name}</td>
-                        <td>${m.category}</td>
-                        <td>${m.phone}</td>
-                        <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span></td>
-                        <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button></td>
-                    </tr>`;
+                        <td><strong>${m.memberId}</strong>  on
+                        <td>${m.name}  on
+                        <td>${m.category}  on
+                        <td>${m.phone}  on
+                        <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span>  on
+                        <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button>  on
+                     on`;
                 });
                 const html = `<div class="form-container">
                     <div class="section-header"><h2><i class="fas fa-users"></i> Members</h2><button class="btn btn-success" onclick="showAddMemberForm()">Add Member</button></div>
                     <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name, ID, or phone..."><button class="btn btn-primary" onclick="searchMembers()">Search</button> <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button></div>
-                    <div class="table-container"><table><thead><tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="membersTableBody">${membersHtml || '<tr><td colspan="6">No members</td></tr>'}</tbody></table></div>
+                    <div class="table-container"> <tr> <thead> <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th>  on</thead><tbody id="membersTableBody">${membersHtml || '  on<td colspan="6">No members  on  on'}</tbody>  on </div>
                 </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading members</p>'; }
@@ -433,20 +528,20 @@
                 const transactions = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()">Checkout</button></div>
                     <div class="search-box"><input type="text" id="circSearch" placeholder="Search by ID, accession, or member..."><button class="btn btn-primary" onclick="searchCirc()">Search</button></div>
-                    <div class="table-container"><table><thead><tr><th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th></tr></thead><tbody id="circTableBody">`;
+                    <div class="table-container"> 表<thead>  on<th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th>  on</thead><tbody id="circTableBody">`;
                 transactions.forEach(doc => {
                     const t = doc.data();
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                     html += `<tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                        <td>${t.transactionId} \n
-                        <td>${t.accessionNo} \n
-                        <td>${t.memberId} \n
-                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} \n
-                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} \n
-                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} \n
-                        <td><span class="badge badge-${isOverdue?'warning':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> \n
-                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} \n
-                        </tr>`;
+                        <td>${t.transactionId} </td>
+                        <td>${t.accessionNo} </td>
+                        <td>${t.memberId} </td>
+                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} </td>
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} </td>
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} </td>
+                        <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> </td>
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} </td>
+                    </tr>`;
                 });
                 html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
@@ -478,7 +573,7 @@
                 let finesHtml = '';
                 
                 if (fines.empty) {
-                    finesHtml = '\\n                                 <td colspan="8" style="text-align:center">No fines recorded</td>\\n                            ';
+                    finesHtml = '<tr><td colspan="8" style="text-align:center">No fines recorded</td></tr>';
                 } else {
                     fines.forEach(doc => {
                         const f = doc.data();
@@ -489,16 +584,16 @@
                         const statusText = f.status || 'Unpaid';
                         
                         finesHtml += `
-                             <tr>
-                                 <td><strong>${f.transactionId || 'N/A'}</strong></td>
-                                 <td>${dueDateStr}</td>
-                                 <td>${returnDateStr}</td>
-                                 <td style="text-align:center">${f.daysLate || 0}</td>
-                                 <td>K${f.finePerDay || 500}</td>
-                                 <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
-                                 <td><span class="badge badge-${statusClass}">${statusText}</span></td>
-                                 <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                             </tr>
+                            <tr>
+                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
+                                <td>${dueDateStr}</td>
+                                <td>${returnDateStr}</td>
+                                <td style="text-align:center">${f.daysLate || 0}</td>
+                                <td>K${f.finePerDay || 500}</td>
+                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
+                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
+                            </tr>
                         `;
                     });
                 }
@@ -518,7 +613,7 @@
                         <div class="table-container">
                             <table>
                                 <thead>
-                                     <tr>
+                                    <tr>
                                         <th>Transaction ID</th>
                                         <th>Due Date</th>
                                         <th>Return Date</th>
@@ -527,7 +622,7 @@
                                         <th>Total Fine</th>
                                         <th>Status</th>
                                         <th>Action</th>
-                                     </tr>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     ${finesHtml}
@@ -548,11 +643,11 @@
             let classesHtml = '';
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
-                     <tr>
-                         <td><strong>${ddc.number}</strong></td>
-                         <td>${ddc.name}</td>
-                         <td>${ddc.description}</td>
-                     </tr>
+                    <tr>
+                        <td><strong>${ddc.number}</strong></td>
+                        <td>${ddc.name}</td>
+                        <td>${ddc.description}</td>
+                    </tr>
                 `;
             });
             
@@ -564,11 +659,11 @@
                     <div class="table-container">
                         <table>
                             <thead>
-                                 <tr>
+                                <tr>
                                     <th>Class Number</th>
                                     <th>Class Name</th>
                                     <th>Description / Example Subjects</th>
-                                 </tr>
+                                </tr>
                             </thead>
                             <tbody>
                                 ${classesHtml}
@@ -586,7 +681,7 @@
             document.getElementById('contentArea').innerHTML = html;
         }
 
-        // ========== FORM FUNCTIONS ==========
+        // ========== FORM FUNCTIONS (Same as before - keeping for completeness) ==========
         function showAddBookForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
