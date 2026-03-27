@@ -271,7 +271,7 @@
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 
-                // Calculate total books and available copies
+                // Calculate total books and available copies from books collection
                 let totalBooks = 0;
                 let totalAvailable = 0;
                 booksSnapshot.forEach(doc => { 
@@ -478,19 +478,28 @@
                             <td>${m.name}</td>
                             <td>${m.category}</td>
                             <td>${m.phone}</td>
-                            <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span></td>
+                            <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span>  on
                             <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button>  on
-                         </tr>
+                          </tr>
                     `;
                 });
                 const html = `
                     <div class="form-container">
                         <div class="section-header"><h2><i class="fas fa-users"></i> Members</h2><button class="btn btn-success" onclick="showAddMemberForm()">Add Member</button></div>
                         <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name, ID, or phone..."><button class="btn btn-primary" onclick="searchMembers()">Search</button> <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button></div>
-                        <div class="table-container">   <thead>   <th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th>   </thead><tbody id="membersTableBody">${membersHtml || '   <td colspan="6">No members   '}</tbody>   </div>
+                        <div class="table-container">
+                            <thead>
+                                 <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="membersTableBody">
+                                ${membersHtml || '<tr><td colspan="6">No members registered</td></tr>'}
+                            </tbody>
+                        </div>
                     </div>`;
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error loading members</p>'; }
+            } catch (error) { 
+                contentArea.innerHTML = '<p>Error loading members</p>'; 
+            }
         }
 
         function searchMembers() {
@@ -533,20 +542,22 @@
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                     html += `
                         <tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                            <td>${t.transactionId}</td>
-                            <td>${t.accessionNo}</td>
-                            <td>${t.memberId}</td>
-                            <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}</td>
-                            <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}</td>
-                            <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}</td>
-                            <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span></td>
-                            <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}</td>
-                        </tr>
+                            <td>${t.transactionId}  <
+                            <td>${t.accessionNo}  <
+                            <td>${t.memberId}  <
+                            <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}  <
+                            <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}  <
+                            <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  <
+                            <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  <
+                            <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  <
+                         </tr>
                     `;
                 });
                 html += '</tbody></div></div>';
                 contentArea.innerHTML = html;
-            } catch (error) { contentArea.innerHTML = '<p>Error loading circulation</p>'; }
+            } catch (error) { 
+                contentArea.innerHTML = '<p>Error loading circulation</p>'; 
+            }
         }
 
         function searchCirc() {
@@ -586,15 +597,15 @@
                         
                         finesHtml += `
                             <tr>
-                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
-                                <td>${dueDateStr}</td>
-                                <td>${returnDateStr}</td>
-                                <td style="text-align:center">${f.daysLate || 0}</td>
-                                <td>K${f.finePerDay || 500}</td>
-                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
-                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
-                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                            </tr>
+                                <td><strong>${f.transactionId || 'N/A'}</strong>  on
+                                <td>${dueDateStr}  on
+                                <td>${returnDateStr}  on
+                                <td style="text-align:center">${f.daysLate || 0}  on
+                                <td>K${f.finePerDay || 500}  on
+                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong>  on
+                                <td><span class="badge badge-${statusClass}">${statusText}</span>  on
+                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}  on
+                             </tr>
                         `;
                     });
                 }
@@ -614,12 +625,12 @@
                         <div class="table-container">
                             <table>
                                 <thead>
-                                    <tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Status</th><th>Action</th></tr>
+                                     <tr><th>Transaction ID</th><th>Due Date</th><th>Return Date</th><th>Days Late</th><th>Fine per Day</th><th>Total Fine</th><th>Status</th><th>Action</th></tr>
                                 </thead>
                                 <tbody>
                                     ${finesHtml}
                                 </tbody>
-                             </table>
+                            </table>
                         </div>
                     </div>
                 `;
@@ -636,10 +647,10 @@
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
                     <tr>
-                        <td><strong>${ddc.number}</strong></td>
-                        <td>${ddc.name}</td>
-                        <td>${ddc.description}</td>
-                    </tr>
+                        <td><strong>${ddc.number}</strong>  on
+                        <td>${ddc.name}  on
+                        <td>${ddc.description}  on
+                     </tr>
                 `;
             });
             
@@ -669,7 +680,7 @@
             document.getElementById('contentArea').innerHTML = html;
         }
 
-        // ========== FORM FUNCTIONS (kept from original) ==========
+        // ========== FORM FUNCTIONS ==========
         function showAddBookForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
