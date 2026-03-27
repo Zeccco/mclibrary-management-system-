@@ -105,6 +105,7 @@
         .toast-warning { border-left: 4px solid var(--warning); }
         @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; cursor: pointer; backdrop-filter: blur(2px); }
+        .overdue-section { background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%); border-left: 4px solid #e74c3c; margin-bottom: 25px; }
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); width: 85%; max-width: 280px; position: fixed; top: 0; left: 0; height: 100vh; z-index: 1000; }
             .sidebar.open { transform: translateX(0); }
@@ -144,15 +145,6 @@
             .form-group input, .form-group select { padding: 10px; font-size: 13px; }
             .btn { padding: 8px 12px; font-size: 0.8rem; }
             .action-btn { padding: 4px 8px; font-size: 0.7rem; }
-        }
-        .overdue-card {
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
-            border-left: 4px solid #e74c3c;
-            margin-bottom: 15px;
-            transition: transform 0.2s;
-        }
-        .overdue-card:hover {
-            transform: translateX(5px);
         }
     </style>
 </head>
@@ -271,7 +263,7 @@
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // ========== DASHBOARD WITH FIXED BORROWED COUNT AND OVERDUE DISPLAY ==========
+        // ========== DASHBOARD WITH FIXED STATS ==========
         async function loadDashboard() {
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="spinner"></div><p>Loading dashboard...</p>';
@@ -279,17 +271,24 @@
                 const booksSnapshot = await db.collection('books').get();
                 const membersSnapshot = await db.collection('members').get();
                 
-                // Get all borrowed transactions (not just status='Borrowed', but also check returnDate)
-                const allTransactions = await db.collection('transactions').get();
+                // Calculate total books and available copies
+                let totalBooks = 0;
+                let totalAvailable = 0;
+                booksSnapshot.forEach(doc => { 
+                    const b = doc.data(); 
+                    totalBooks += b.totalCopies || 0; 
+                    totalAvailable += b.availableCopies || 0; 
+                });
                 
-                // Calculate borrowed books correctly
+                // Get all borrowed books (where returnDate is null or empty)
+                const allTransactions = await db.collection('transactions').get();
                 let borrowedCount = 0;
                 const overdueList = [];
                 const today = new Date();
                 
                 allTransactions.forEach(doc => {
                     const t = doc.data();
-                    // A book is borrowed if returnDate is null OR returnDate is empty
+                    // A book is borrowed if there's no return date
                     const isBorrowed = !t.returnDate || t.returnDate === null;
                     
                     if (isBorrowed) {
@@ -311,14 +310,6 @@
                     }
                 });
                 
-                // Calculate total books (sum of copies)
-                let totalBooks = 0, totalAvailable = 0;
-                booksSnapshot.forEach(doc => { 
-                    const b = doc.data(); 
-                    totalBooks += b.totalCopies || 0; 
-                    totalAvailable += b.availableCopies || 0; 
-                });
-                
                 const totalMembers = membersSnapshot.size;
                 
                 // Recent transactions
@@ -331,21 +322,21 @@
                         const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                         recentTransactionsHtml += `
                             <tr>
-                                <td>${t.transactionId || 'N/A'}  on
-                                <td>${t.accessionNo || 'N/A'}  on
-                                <td>${t.memberId || 'N/A'}  on
-                                <td>${issueDate}  on
-                                <td><span class="badge badge-${t.status === 'Borrowed' ? (isOverdue ? 'overdue' : 'borrowed') : 'available'}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span>  on
-                             on
+                                <td>${t.transactionId || 'N/A'}</td>
+                                <td>${t.accessionNo || 'N/A'}</td>
+                                <td>${t.memberId || 'N/A'}</td>
+                                <td>${issueDate}</td>
+                                <td><span class="badge badge-${t.status === 'Borrowed' ? (isOverdue ? 'overdue' : 'borrowed') : 'available'}">${t.status || 'N/A'}${isOverdue ? ' (Overdue)' : ''}</span></td>
+                            </tr>
                         `;
                     });
                 } catch(e) { console.log('No transactions'); }
                 
-                // Overdue books HTML
+                // Overdue books section
                 let overdueHtml = '';
                 if (overdueList.length > 0) {
                     overdueHtml = `
-                        <div class="form-container" style="border-left: 4px solid #e74c3c;">
+                        <div class="form-container overdue-section">
                             <div class="section-header">
                                 <h2><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> Overdue Books (${overdueList.length})</h2>
                                 <span class="badge badge-overdue">Action Required</span>
@@ -388,7 +379,7 @@
                         <div class="section-header"><h2><i class="fas fa-history"></i> Recent Transactions</h2></div>
                         <div class="table-container">
                             <table>
-                                <thead> <tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr> </thead>
+                                <thead><tr><th>Transaction ID</th><th>Accession No</th><th>Member ID</th><th>Issue Date</th><th>Status</th></tr></thead>
                                 <tbody>${recentTransactionsHtml || '<tr><td colspan="5" style="text-align:center">No recent transactions</td></tr>'}</tbody>
                             </table>
                         </div>
@@ -416,24 +407,24 @@
                     const b = doc.data();
                     const available = b.availableCopies || 0;
                     booksHtml += `<tr class="catalog-row" data-title="${(b.title || '').toLowerCase()}" data-author="${(b.author || '').toLowerCase()}" data-accession="${(b.accessionNo || '').toLowerCase()}" data-isbn="${(b.isbn || '').toLowerCase()}">
-                        <td><strong>${b.accessionNo}</strong>  on
-                        <td>${b.title}  on
-                        <td>${b.author}  on
-                        <td>${b.isbn || '-'}  on
-                        <td>${b.subject || '-'}  on
-                        <td>${b.ddcNumber || '-'}  on
-                        <td>${b.year || '-'}  on
-                        <td>${b.totalCopies}  on
-                        <td style="color:${available>0?'green':'red'}">${available}  on
-                        <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span>  on
-                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button>  on
-                     on`;
+                        <td><strong>${b.accessionNo}</strong></td>
+                        <td>${b.title}</td>
+                        <td>${b.author}</td>
+                        <td>${b.isbn || '-'}</td>
+                        <td>${b.subject || '-'}</td>
+                        <td>${b.ddcNumber || '-'}</td>
+                        <td>${b.year || '-'}</td>
+                        <td>${b.totalCopies}</td>
+                        <td style="color:${available>0?'green':'red'}">${available}</td>
+                        <td><span class="badge badge-${available>0?'available':'borrowed'}">${available>0?'Available':'Borrowed'}</span></td>
+                        <td><button class="btn btn-primary action-btn" onclick="editBook('${doc.id}')">Edit</button> <button class="btn btn-danger action-btn" onclick="deleteBook('${doc.id}')">Delete</button></td>
+                    </tr>`;
                 });
                 const html = `<div class="form-container">
                     <div class="section-header"><h2><i class="fas fa-books"></i> Catalog</h2><button class="btn btn-success" onclick="showAddBookForm()">Add Book</button></div>
                     <div class="search-box"><input type="text" id="catalogSearch" placeholder="Search by title, author, ISBN, or accession number..."><button class="btn btn-primary" onclick="searchCatalog()">Search</button> <button class="btn btn-outline" onclick="clearCatalogSearch()">Clear</button></div>
                     <div class="ddc-nav">${ddcMainClasses.map(d => `<div class="ddc-class" onclick="filterByDDC('${d.number}')"><strong>${d.number}</strong><br><small>${d.name}</small></div>`).join('')}</div>
-                    <div class="table-container"> <table> <thead> <tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr> </thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody> </table> </div>
+                    <div class="table-container"><table><thead><tr><th>Accession</th><th>Title</th><th>Author</th><th>ISBN</th><th>Subject</th><th>DDC</th><th>Year</th><th>Total</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead><tbody id="catalogTableBody">${booksHtml || '<tr><td colspan="11">No books</td></tr>'}</tbody></table></div>
                 </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading catalog</p>'; }
@@ -483,10 +474,10 @@
                 members.forEach(doc => {
                     const m = doc.data();
                     membersHtml += `<tr class="member-row" data-name="${(m.name || '').toLowerCase()}" data-id="${(m.memberId || '').toLowerCase()}" data-phone="${(m.phone || '').toLowerCase()}">
-                        <td><strong>${m.memberId}</strong>  on
-                        <td>${m.name}  on
-                        <td>${m.category}  on
-                        <td>${m.phone}  on
+                        <td><strong>${m.memberId}</strong></td>
+                        <td>${m.name}</td>
+                        <td>${m.category}</td>
+                        <td>${m.phone}</td>
                         <td><span class="badge badge-${m.status==='Active'?'available':'borrowed'}">${m.status}</span>  on
                         <td><button class="btn btn-danger action-btn" onclick="deleteMember('${doc.id}')">Delete</button>  on
                      on`;
@@ -494,7 +485,7 @@
                 const html = `<div class="form-container">
                     <div class="section-header"><h2><i class="fas fa-users"></i> Members</h2><button class="btn btn-success" onclick="showAddMemberForm()">Add Member</button></div>
                     <div class="search-box"><input type="text" id="memberSearch" placeholder="Search by name, ID, or phone..."><button class="btn btn-primary" onclick="searchMembers()">Search</button> <button class="btn btn-outline" onclick="clearMemberSearch()">Clear</button></div>
-                    <div class="table-container"> <tr> <thead> <tr><th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th>  on</thead><tbody id="membersTableBody">${membersHtml || '  on<td colspan="6">No members  on  on'}</tbody>  on </div>
+                    <div class="table-container">   <thead>   <th>Member ID</th><th>Name</th><th>Category</th><th>Phone</th><th>Status</th><th>Actions</th>   </thead><tbody id="membersTableBody">${membersHtml || '   <td colspan="6">No members   '}</tbody>   </div>
                 </div>`;
                 contentArea.innerHTML = html;
             } catch (error) { contentArea.innerHTML = '<p>Error loading members</p>'; }
@@ -528,20 +519,20 @@
                 const transactions = await db.collection('transactions').orderBy('issueDate', 'desc').get();
                 let html = `<div class="form-container"><div class="section-header"><h2><i class="fas fa-exchange-alt"></i> Circulation</h2><button class="btn btn-success" onclick="showCheckoutForm()">Checkout</button></div>
                     <div class="search-box"><input type="text" id="circSearch" placeholder="Search by ID, accession, or member..."><button class="btn btn-primary" onclick="searchCirc()">Search</button></div>
-                    <div class="table-container"> 表<thead>  on<th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th>  on</thead><tbody id="circTableBody">`;
+                    <div class="table-container">   <thead>   <th>ID</th><th>Accession</th><th>Member</th><th>Issue</th><th>Due</th><th>Return</th><th>Status</th><th>Action</th>   </thead><tbody id="circTableBody">`;
                 transactions.forEach(doc => {
                     const t = doc.data();
                     const isOverdue = t.dueDate && !t.returnDate && t.dueDate.toDate() < new Date();
                     html += `<tr data-id="${(t.transactionId || '').toLowerCase()}" data-accession="${(t.accessionNo || '').toLowerCase()}" data-member="${(t.memberId || '').toLowerCase()}">
-                        <td>${t.transactionId} </td>
-                        <td>${t.accessionNo} </td>
-                        <td>${t.memberId} </td>
-                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'} </td>
-                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'} </td>
-                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'} </td>
-                        <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span> </td>
-                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'} </td>
-                    </tr>`;
+                        <td>${t.transactionId}  <
+                        <td>${t.accessionNo}  <
+                        <td>${t.memberId}  <
+                        <td>${t.issueDate ? new Date(t.issueDate.toDate()).toLocaleDateString() : '-'}  <
+                        <td>${t.dueDate ? new Date(t.dueDate.toDate()).toLocaleDateString() : '-'}  <
+                        <td>${t.returnDate ? new Date(t.returnDate.toDate()).toLocaleDateString() : '-'}  <
+                        <td><span class="badge badge-${isOverdue?'overdue':(t.status==='Borrowed'?'borrowed':'available')}">${t.status}${isOverdue?' Overdue':''}</span>  <
+                        <td>${t.status==='Borrowed' ? `<button class="btn btn-success action-btn" onclick="returnBook('${doc.id}','${t.accessionNo}')">Return</button>` : '-'}  <
+                     on`;
                 });
                 html += '</tbody> </div></div>';
                 contentArea.innerHTML = html;
@@ -585,15 +576,15 @@
                         
                         finesHtml += `
                             <tr>
-                                <td><strong>${f.transactionId || 'N/A'}</strong></td>
-                                <td>${dueDateStr}</td>
-                                <td>${returnDateStr}</td>
-                                <td style="text-align:center">${f.daysLate || 0}</td>
-                                <td>K${f.finePerDay || 500}</td>
-                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong></td>
-                                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
-                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}</td>
-                            </tr>
+                                <td><strong>${f.transactionId || 'N/A'}</strong>  on
+                                <td>${dueDateStr}  on
+                                <td>${returnDateStr}  on
+                                <td style="text-align:center">${f.daysLate || 0}  on
+                                <td>K${f.finePerDay || 500}  on
+                                <td><strong style="color:#e74c3c;">K${f.totalFine || 0}</strong>  on
+                                <td><span class="badge badge-${statusClass}">${statusText}</span>  on
+                                <td>${f.status !== 'Paid' ? `<button class="btn btn-success action-btn" onclick="payFine('${doc.id}')"><i class="fas fa-money-bill"></i> Pay</button>` : '<span class="badge badge-available">Paid</span>'}  on
+                             on
                         `;
                     });
                 }
@@ -611,23 +602,21 @@
                             <h2><i class="fas fa-exclamation-triangle"></i> Fines Management</h2>
                         </div>
                         <div class="table-container">
-                            <table>
+                            表
                                 <thead>
-                                    <tr>
-                                        <th>Transaction ID</th>
-                                        <th>Due Date</th>
-                                        <th>Return Date</th>
-                                        <th>Days Late</th>
-                                        <th>Fine per Day</th>
-                                        <th>Total Fine</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
+                                     <th>Transaction ID</th>
+                                     <th>Due Date</th>
+                                     <th>Return Date</th>
+                                     <th>Days Late</th>
+                                     <th>Fine per Day</th>
+                                     <th>Total Fine</th>
+                                     <th>Status</th>
+                                     <th>Action</th>
+                                     </thead>
                                 <tbody>
                                     ${finesHtml}
                                 </tbody>
-                            </table>
+                             </div>
                         </div>
                     </div>
                 `;
@@ -643,11 +632,11 @@
             let classesHtml = '';
             ddcMainClasses.forEach(ddc => {
                 classesHtml += `
-                    <tr>
-                        <td><strong>${ddc.number}</strong></td>
-                        <td>${ddc.name}</td>
-                        <td>${ddc.description}</td>
-                    </tr>
+                     <tr>
+                         <td><strong>${ddc.number}</strong></td>
+                         <td>${ddc.name}</td>
+                         <td>${ddc.description}</td>
+                     </tr>
                 `;
             });
             
@@ -657,19 +646,16 @@
                         <h2><i class="fas fa-sitemap"></i> Dewey Decimal Classification (DDC)</h2>
                     </div>
                     <div class="table-container">
-                        <table>
+                        表
                             <thead>
-                                <tr>
-                                    <th>Class Number</th>
-                                    <th>Class Name</th>
-                                    <th>Description / Example Subjects</th>
-                                </tr>
-                            </thead>
+                                 <th>Class Number</th>
+                                 <th>Class Name</th>
+                                 <th>Description / Example Subjects</th>
+                                 </thead>
                             <tbody>
                                 ${classesHtml}
                             </tbody>
-                        </table>
-                    </div>
+                         </div>
                     <div style="margin-top:20px; padding:20px; background:#f8f9fa; border-radius:10px;">
                         <h4><i class="fas fa-info-circle"></i> About the DDC System</h4>
                         <p>The Dewey Decimal Classification (DDC) is a library classification system created by Melvil Dewey in 1876. It organizes knowledge into ten main classes, each represented by a three-digit number. The system is used in over 200,000 libraries in 135 countries.</p>
@@ -681,7 +667,7 @@
             document.getElementById('contentArea').innerHTML = html;
         }
 
-        // ========== FORM FUNCTIONS (Same as before - keeping for completeness) ==========
+        // ========== FORM FUNCTIONS ==========
         function showAddBookForm() {
             const modal = document.getElementById('modal');
             document.getElementById('modalContent').innerHTML = `
